@@ -31,4 +31,4 @@ if (config.server.secure) {
 } else {
     httpUrl = "http://localhost:" + port;
 }
-console.log('signal master is running at: ' + httpUrl);
+console.log('SignalServer is running at: ' + httpUrl);

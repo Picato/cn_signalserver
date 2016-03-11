@@ -24,5 +24,7 @@
       "secret": "turnserversharedsecret",
       "expiry": 86400
     }
-  ]
+  ],
+  "secret": "ThisIsTheSecretKeyOfConekAbdbddsfjdfsajdfsjkjdsf",
+  "expiry": 864000
 }
