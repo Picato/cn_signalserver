@@ -1,0 +1,28 @@
+{
+  "isDev": false,
+  "logLevel": 3,
+  "server": {
+    "port": 8888,
+    "/* secure */": "/* whether this connects via https */",
+    "secure": true,
+    "key": "config/sslcerts/key.pem",
+    "cert": "config/sslcerts/cert.pem",
+    "password": null
+  },
+  "rooms": {
+    "/* maxClients */": "/* maximum number of clients per room. 0 = no limit */",
+    "maxClients": 0
+  },
+  "stunservers": [
+    {
+      "url": "stun:127.0.0.1:3478"
+    }
+  ],
+  "turnservers": [
+    {
+      "urls": ["turn:172.0.0.1"],
+      "secret": "turnserversharedsecret",
+      "expiry": 86400
+    }
+  ]
+}
