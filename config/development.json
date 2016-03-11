@@ -21,8 +21,11 @@
   "turnservers": [
     {
       "urls": ["turn:your.turn.servers.here"],
-      "secret": "turnserversharedsecret",
+      "secret": "ThisIsTheSecretKeyOfConekAbdbddsfjdfsajdfsjkjdsf",
       "expiry": 86400
     }
-  ]
+  ],
+
+  "secret": "ThisIsTheSecretKeyOfConekAbdbddsfjdfsajdfsjkjdsf",
+  "expiry": 864000
 }
