@@ -1,5 +1,4 @@
-var yetify = require('yetify'),
-  config = require('getconfig'),
+var config = require('getconfig'),
   fs = require('fs'),
   sockets = require('./sockets'),
   port = parseInt(process.env.PORT || config.server.port, 10),
@@ -8,13 +7,12 @@ var yetify = require('yetify'),
 
 /**
  * server handler function
- * end all request
+ * end all requests
  */
 var server_handler = function (req, res) {
   res.writeHead(404);
   res.end();
 };
-
 
 // Create an http(s) server instance to that socket.io can listen to
 if (config.server.secure) {
@@ -28,6 +26,7 @@ if (config.server.secure) {
 }
 server.listen(port);
 
+//start socket server
 sockets(server, config);
 
 if (config.uid) process.setuid(config.uid);

@@ -13,9 +13,9 @@ module.exports = function (server, config) {
   });
 
   //config log
-  if (config.logLevel) {
-    io.set('log level', config.logLevel);
-  }
+  //if (config.logLevel) {
+  //  io.set('log level', config.logLevel);
+  //}
 
   //init CallManager
   var cm = new CM(io, config);
