@@ -4,7 +4,8 @@
 var uuid = require('node-uuid'),
   crypto = require('crypto'),
   ArrayList = new require('arraylist'),
-  MSGTYPE = require('./msgtype');
+  MSGTYPE = require('./msgtype'),
+  logger = require('winston');
 
 function CallManager(io, config) {
   this.io = io;
@@ -29,8 +30,8 @@ CallManager.prototype.handleClient = function(client) {
   });
 
   // pass a message to another id
-  client.on('message', function (details) {
-    console.log('on message', details);
+  client.on(MSGTYPE.MESSAGE, function (details) {
+    logger.info('on message', details);
     if (!details) return;
 
     var otherClient = io.to(details.to);

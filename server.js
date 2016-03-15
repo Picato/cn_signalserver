@@ -3,11 +3,18 @@ var yetify = require('yetify'),
   fs = require('fs'),
   sockets = require('./sockets'),
   port = parseInt(process.env.PORT || config.server.port, 10),
-  server_handler = function (req, res) {
-    res.writeHead(404);
-    res.end();
-  },
+  logger = require('./log.js'),
   server = null;
+
+/**
+ * server handler function
+ * end all request
+ */
+var server_handler = function (req, res) {
+  res.writeHead(404);
+  res.end();
+};
+
 
 // Create an http(s) server instance to that socket.io can listen to
 if (config.server.secure) {
@@ -27,8 +34,9 @@ if (config.uid) process.setuid(config.uid);
 
 var httpUrl;
 if (config.server.secure) {
-    httpUrl = "https://localhost:" + port;
+  httpUrl = "https://localhost:" + port;
 } else {
-    httpUrl = "http://localhost:" + port;
+  httpUrl = "http://localhost:" + port;
 }
-console.log('SignalServer is running at: ' + httpUrl);
+
+logger.info('SignalServer is running at: ' + httpUrl);

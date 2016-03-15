@@ -1,5 +1,6 @@
 var socketIO = require('socket.io'),
-  CM = require('./callmanager');
+  CM = require('./callmanager'),
+  logger = require('winston');
 
 module.exports = function (server, config) {
   var io = socketIO.listen(server);
@@ -25,12 +26,12 @@ module.exports = function (server, config) {
 
   //authenticate function
   function authenticate(socket, data, callback) {
-    console.log(socket.id);
+    logger.debug(socket.id);
     //get credentials sent by the client
     var token = data.token;
-    console.log('received token', token);
+    logger.info('received token', token);
 
-    //check token
+    //TODO check token, now accept all
     if (true)
       callback(null, true);
     else
