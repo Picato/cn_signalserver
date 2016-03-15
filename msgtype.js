@@ -10,5 +10,17 @@ module.exports = {
   MESSAGE: 'message',
   RINGING: 'ringing',
   ACCEPT: 'accept',
-  DECLINE: 'decline'
+  DECLINE: 'decline',
+
+  //close
+  DISCONNECT: 'disconnect',
+  LEAVE: 'leave',
+
+  //screen
+  SHARESCREEN: 'shareScreen',
+  UNSHARESCREEN: 'unshareScreen',
+
+  //server
+  STUNSERVER: 'stunservers',
+  TURNSERVER: 'turnservers'
 }

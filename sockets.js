@@ -1,5 +1,5 @@
 var socketIO = require('socket.io'),
-  CM = require('./CallManager');
+  CM = require('./callmanager');
 
 module.exports = function (server, config) {
   var io = socketIO.listen(server);

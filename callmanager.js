@@ -3,15 +3,15 @@
  */
 var uuid = require('node-uuid'),
   crypto = require('crypto'),
-  Hashtable = new require('hashtable')(),
-  msgtype = require('./msgtype');
+  ArrayList = new require('arraylist'),
+  MSGTYPE = require('./msgtype');
 
 function CallManager(io, config) {
   this.io = io;
   this.config = config;
 
   //store all operator socket.id
-  this.listOperator = new Hashtable();
+  this.listOperator = new ArrayList();
 }
 
 /**
@@ -19,16 +19,13 @@ function CallManager(io, config) {
  * @description: handle all message here
  */
 CallManager.prototype.handleClient = function(client) {
-  client.resources = {
-    screen: false,
-    video: true,
-    audio: false
-  };
+  client.resources = { screen: false, video: true, audio: false };
 
   //ringing message
-  client.on('ringing', function (message) {
+  client.on(MSGTYPE.RINGING, function (message) {
     var rec = io.to(message.id);
-    rec.emit('ringing', "message");
+
+    rec.emit(MSGTYPE.RINGING, "message");
   });
 
   // pass a message to another id
@@ -43,11 +40,12 @@ CallManager.prototype.handleClient = function(client) {
     otherClient.emit('message', details);
   });
 
-  client.on('shareScreen', function () {
+  //share screen
+  client.on(MSGTYPE.SHARESCREEN, function () {
     client.resources.screen = true;
   });
 
-  client.on('unshareScreen', function (type) {
+  client.on(MSGTYPE.UNSHARESCREEN, function () {
     client.resources.screen = false;
     removeFeed('screen');
   });
@@ -76,7 +74,7 @@ CallManager.prototype.handleClient = function(client) {
 
     // check if maximum number of clients reached
     if (this.config.rooms && this.config.rooms.maxClients > 0 &&
-      clientsInRoom(name) >= this.config.rooms.maxClients) {
+      io.sockets.clients(name).length >= this.config.rooms.maxClients) {
       cb('full');
       return;
     }
@@ -90,10 +88,13 @@ CallManager.prototype.handleClient = function(client) {
 
   // we don't want to pass "leave" directly because the
   // event type string of "socket end" gets passed too.
-  client.on('disconnect', function () {
+  client.on(MSGTYPE.DISCONNECT, function () {
     removeFeed();
+
+    //TODO if operator, remove from list operator
   });
-  client.on('leave', function () {
+
+  client.on(MSGTYPE.LEAVE, function () {
     removeFeed();
   });
 
@@ -123,8 +124,57 @@ CallManager.prototype.handleClient = function(client) {
     ));
   });
 
-  // tell client about stun and turn servers and generate nonces
-  client.emit('stunservers', config.stunservers || []);
+  function describeRoom(name) {
+    var adapter = io.nsps['/'].adapter;
+    var clients = adapter.rooms[name] || {};
+    var result = {
+      clients: {}
+    };
+    Object.keys(clients).forEach(function (id) {
+      result.clients[id] = adapter.nsp.connected[id].resources;
+    });
+    return result;
+  }
+}
+
+/**
+ * @param operatorId
+ * @param socketId: socket id of operator
+ */
+CallManager.prototype.addOperator = function(operatorId, socketId) {
+  //add operator to list
+  this.listOperator.set(operatorId, socketId);
+}
+
+/**
+ * @param vSocketId: visitor socket id
+ * @param operatorId: target call/chat
+ * @param msgType: chat/call
+ */
+CallManager.prototype.invOperator = function(vSocketId, operatorId, msgType) {
+  var operatorSocket = this.listOperator.get(operatorId);
+
+  switch(msgType) {
+    case MSGTYPE.INVITE_CALL:
+      //send invite to operator
+      operatorSocket.emit(this.msg, {});
+      break;
+    case MSGTYPE.INVITE_CHAT:
+      //create room
+
+      //TODO send back operator's socket_id to visitor
+      break;
+  }
+}
+
+/**
+ * Inform client STUN/TURN's sever information
+ * @param client: client socket
+ * @param config: configuration of stun & server
+ */
+CallManager.prototype.sendServerInfoToClient = function(client, config) {
+  // tell client about stun servers
+  client.emit(MSGTYPE.STUNSERVER, config.stunservers || []);
 
   // create shared secret nonces for TURN authentication
   // the process is described in draft-uberti-behave-turn-rest
@@ -145,50 +195,9 @@ CallManager.prototype.handleClient = function(client) {
       });
     });
   }
-  client.emit('turnservers', credentials);
 
-  function describeRoom(name) {
-    var adapter = io.nsps['/'].adapter;
-    var clients = adapter.rooms[name] || {};
-    var result = {
-      clients: {}
-    };
-    Object.keys(clients).forEach(function (id) {
-      result.clients[id] = adapter.nsp.connected[id].resources;
-    });
-    return result;
-  }
-
-  function clientsInRoom(name) {
-    return io.sockets.clients(name).length;
-  }
-}
-
-/**
- * @param operatorId
- * @param socketId: socket id of operator
- */
-CallManager.prototype.addOperator = function(operatorId, socketId) {
-  this.listOperator.put(operatorId, socketId);
-}
-
-/**
- * @param vSocketId: visitor socket id
- * @param operatorId: target call/chat
- * @param msgType: chat/call
- */
-CallManager.prototype.invOperator = function(vSocketId, operatorId, msgType) {
-  var operatorSocket = this.listOperator.get(operatorId);
-
-  switch(msgType) {
-    case msgtype.INVITE_CALL:
-      //send invite to operator
-      operatorSocket.emit(this.msg, {});
-      break;
-    case msgtype.INVITE_CHAT:
-      //create room
-      break;
-  }
+  // tell client about turn servers
+  client.emit(MSGTYPE.TURNSERVER, credentials);
 }
 
 module.exports = CallManager;
