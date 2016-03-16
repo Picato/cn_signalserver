@@ -49,7 +49,7 @@ module.exports = function (server, config) {
     } else {
       //is visitor, send msg to operator
       var msgType = data.msgtype;
-      cm.invOperator(socket.id, operId, msgType);
+      cm.invOperator(socket, operId, msgType);
     }
   }
 };

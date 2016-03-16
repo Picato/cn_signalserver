@@ -152,20 +152,30 @@ CallManager.prototype.addOperator = function(operatorId, socketId) {
  * @param operatorId: target call/chat
  * @param msgType: chat/call
  */
-CallManager.prototype.invOperator = function(vSocketId, operatorId, msgType) {
+CallManager.prototype.invOperator = function(vSocket, operatorId, msgType) {
+  logger.info('receive visitor connect');
   var operatorSocket = this.listOperator.get(operatorId);
+  if (!operatorSocket) return;
+
+  var oprSocket = io.to(operatorSocket);
+  if (!oprSocket) return;
 
   switch(msgType) {
     case MSGTYPE.INVITE_CALL:
+      logger.info('invite call');
       //send invite to operator
-      operatorSocket.emit(this.msg, {});
+      //TODO more info will be sent to callee
+      oprSocket.emit(MSGTYPE.INVITE_CALL, {fromId: vSocket.id});
       break;
     case MSGTYPE.INVITE_CHAT:
-      //create room
-
-      //TODO send back operator's socket_id to visitor
+      logger.info('invite chat');
+      //send invite chat
+      oprSocket.emit(MSGTYPE.INVITE_CHAT, {fromId: vSocket.id/*more info*/});
       break;
   }
+
+  //send trying back to visitor
+  vSocket.emit(MSGTYPE.TRYING100, {});
 }
 
 /**
