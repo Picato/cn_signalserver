@@ -14,7 +14,6 @@ module.exports = function (server, config) {
     timeout: 1000
   });
 
-
   //init CallManager
   var cm = new CM(io, config);
 
@@ -26,8 +25,8 @@ module.exports = function (server, config) {
   function authenticate(socket, data, callback) {
     logger.debug(socket.id);
     var token = data.token;
-    var key    = data.key;
-    var hash     = crypto.createHmac('sha1', config.secret).update(key);
+    var key = data.key;
+    var hash = crypto.createHmac('sha1', config.secret).update(key);
 
     logger.info('received token ', token, ' key ', key);
     if (hash === token) {
@@ -41,11 +40,13 @@ module.exports = function (server, config) {
   function postAuthenticate(socket, data) {
     if (!data) return;
 
-    var operId = data.operatorId;
+    logger.info('post authenticate data', data);
+
+    var operId = data.oid;
     if (data.isOperator) {
       //add socket callmanager
       cm.addOperator(operId, socket.id);
-    } else {
+    } else if (data.isVisitor) {
       //is visitor, send msg to operator
       var msgType = data.msgtype;
       cm.invOperator(socket, operId, msgType);

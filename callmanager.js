@@ -20,13 +20,15 @@ function CallManager(io, config) {
  * @description: handle all message here
  */
 CallManager.prototype.handleClient = function(client) {
+  var self = this;
   client.resources = { screen: false, video: true, audio: false };
 
   //ringing message
   client.on(MSGTYPE.RINGING, function (message) {
-    var rec = io.to(message.id);
+    var rec = self.io.to(message.to);
 
-    rec.emit(MSGTYPE.RINGING, "message");
+    //forward message
+    rec.emit(MSGTYPE.RINGING, message);
   });
 
   // pass a message to another id
@@ -34,7 +36,7 @@ CallManager.prototype.handleClient = function(client) {
     logger.info('on message', details);
     if (!details) return;
 
-    var otherClient = io.to(details.to);
+    var otherClient = self.io.to(details.to);
     if (!otherClient) return;
 
     details.from = client.id;
@@ -143,6 +145,7 @@ CallManager.prototype.handleClient = function(client) {
  * @param socketId: socket id of operator
  */
 CallManager.prototype.addOperator = function(operatorId, socketId) {
+  logger.info('an operator join');
   //add operator to list
   this.listOperator.set(operatorId, socketId);
 }
@@ -153,24 +156,32 @@ CallManager.prototype.addOperator = function(operatorId, socketId) {
  * @param msgType: chat/call
  */
 CallManager.prototype.invOperator = function(vSocket, operatorId, msgType) {
-  logger.info('receive visitor connect');
+  logger.info('receive visitor connect', msgType);
   var operatorSocket = this.listOperator.get(operatorId);
+  logger.info('invOperator - get operatorSocketId', operatorSocket);
   if (!operatorSocket) return;
 
-  var oprSocket = io.to(operatorSocket);
+  var oprSocket = this.io.to(operatorSocket);
   if (!oprSocket) return;
+  logger.info('invOperator - get operatorSocket');
 
   switch(msgType) {
     case MSGTYPE.INVITE_CALL:
       logger.info('invite call');
       //send invite to operator
       //TODO more info will be sent to callee
-      oprSocket.emit(MSGTYPE.INVITE_CALL, {fromId: vSocket.id});
+      oprSocket.emit(MSGTYPE.INVITE_CALL, {
+        from: vSocket.id,
+        to: operatorSocket
+      });
       break;
     case MSGTYPE.INVITE_CHAT:
       logger.info('invite chat');
       //send invite chat
-      oprSocket.emit(MSGTYPE.INVITE_CHAT, {fromId: vSocket.id/*more info*/});
+      oprSocket.emit(MSGTYPE.INVITE_CHAT, {
+        from: vSocket.id,
+        to: operatorSocket/*more info*/
+      });
       break;
   }
 

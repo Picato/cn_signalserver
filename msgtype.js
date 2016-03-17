@@ -9,7 +9,7 @@ module.exports = {
   INVITE_CALL: 'call',
 
   MESSAGE: 'message',
-  RINGING: 'ringing',
+  RINGING: '180',
   ACCEPT: 'accept',
   DECLINE: 'decline',
 
@@ -17,12 +17,10 @@ module.exports = {
   OPERATOR_SOCKET_ID: 'operatorid',
 
   //rely
-  TRYING100: '100trying',
-  RINGING180: '180ringing',
-  OK200: '200OK',
+  TRYING: '100',
+  OK: '200',
   ACK: 'ack',
-  BYE_FROM: 'byefrome',
-  BYE_TO: 'byeto',
+  BYE: 'bye',
 
   //close
   DISCONNECT: 'disconnect',
