@@ -1,8 +1,10 @@
 var socketIO = require('socket.io'),
   CM = require('./callmanager'),
+  crypto = require('crypto'),
   logger = require('winston');
 
 module.exports = function (server, config) {
+
   var io = socketIO.listen(server);
 
   //authenticate
@@ -12,10 +14,6 @@ module.exports = function (server, config) {
     timeout: 1000
   });
 
-  //config log
-  //if (config.logLevel) {
-  //  io.set('log level', config.logLevel);
-  //}
 
   //init CallManager
   var cm = new CM(io, config);
@@ -27,15 +25,16 @@ module.exports = function (server, config) {
   //authenticate function
   function authenticate(socket, data, callback) {
     logger.debug(socket.id);
-    //get credentials sent by the client
     var token = data.token;
-    logger.info('received token', token);
+    var key    = data.key;
+    var hash     = crypto.createHmac('sha1', config.secret).update(key);
 
-    //TODO check token, now accept all
-    if (true)
-      callback(null, true);
-    else
+    logger.info('received token ', token, ' key ', key);
+    if (hash === token) {
+        callback(null, true);
+    } else {
       return callback(new Error("failed"));
+    }
   }
 
   //post authenticate
@@ -52,6 +51,5 @@ module.exports = function (server, config) {
       cm.invOperator(socket, operId, msgType);
     }
   }
+
 };
-
-
