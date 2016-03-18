@@ -31,6 +31,19 @@ CallManager.prototype.handleClient = function(client) {
     rec.emit(MSGTYPE.RINGING, message);
   });
 
+  //accept message
+  client.on(MSGTYPE.ACCEPT, function(message) {
+    logger.info('accept msg', message);
+    var rec = self.io.to(message.to);
+
+    //forward accept message
+    rec.emit(MSGTYPE.RINGING, message);
+
+    //inform stun & turn server
+    self.sendServerInfoToClient(client, self.config);
+    self.sendServerInfoToClient(rec, self.config);
+  });
+
   // pass a message to another id
   client.on(MSGTYPE.MESSAGE, function (details) {
     logger.info('on message', details);
@@ -203,8 +216,8 @@ CallManager.prototype.sendServerInfoToClient = function(client, config) {
   var credentials = [];
 
   // allow selectively vending turn credentials based on origin.
-  var origin = client.handshake.headers.origin;
-  if (!config.turnorigins || config.turnorigins.indexOf(origin) !== -1) {
+  //var origin = client.handshake.headers.origin;
+  //if (!config.turnorigins || config.turnorigins.indexOf(origin) !== -1) {
     config.turnservers.forEach(function (server) {
       var hmac = crypto.createHmac('sha1', server.secret);
       // default to 86400 seconds timeout unless specified
@@ -216,7 +229,7 @@ CallManager.prototype.sendServerInfoToClient = function(client, config) {
         urls: server.urls || server.url
       });
     });
-  }
+  //}
 
   // tell client about turn servers
   client.emit(MSGTYPE.TURNSERVER, credentials);
