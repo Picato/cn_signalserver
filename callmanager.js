@@ -32,16 +32,19 @@ CallManager.prototype.handleClient = function(client) {
   });
 
   //accept message
-  client.on(MSGTYPE.ACCEPT, function(message) {
+  client.on(MSGTYPE.ACCEPT, function(message, cb) {
     logger.info('accept msg', message);
     var rec = self.io.to(message.to);
-
-    //forward accept message
-    rec.emit(MSGTYPE.RINGING, message);
 
     //inform stun & turn server
     self.sendServerInfoToClient(client, self.config);
     self.sendServerInfoToClient(rec, self.config);
+
+    //forward accept message
+    rec.emit(MSGTYPE.ACCEPT , {
+      id: client.id,
+      resource: client.resources
+    });
   });
 
   // pass a message to another id
@@ -141,7 +144,7 @@ CallManager.prototype.handleClient = function(client) {
   });
 
   function describeRoom(name) {
-    var adapter = io.nsps['/'].adapter;
+    var adapter = self.io.nsps['/'].adapter;
     var clients = adapter.rooms[name] || {};
     var result = {
       clients: {}
