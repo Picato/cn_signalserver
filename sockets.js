@@ -49,8 +49,7 @@ module.exports = function (server, config) {
       cm.addOperator(operId, socket.id);
     } else if (data.isVisitor) {
       //is visitor, send msg to operator
-      var msgType = data.msgtype;
-      cm.invOperator(socket, operId, msgType);
+      cm.invOperator(socket, data);
     }
   }
 

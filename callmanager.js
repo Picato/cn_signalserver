@@ -171,9 +171,9 @@ CallManager.prototype.addOperator = function(operatorId, socketId) {
  * @param operatorId: target call/chat
  * @param msgType: chat/call
  */
-CallManager.prototype.invOperator = function(vSocket, operatorId, msgType) {
-  logger.info('receive visitor connect', msgType);
-  var operatorSocket = this.listOperator.get(operatorId);
+CallManager.prototype.invOperator = function(vSocket, data) {
+  logger.info('receive visitor connect', data);
+  var operatorSocket = this.listOperator.get(data.oid);
   logger.info('invOperator - get operatorSocketId', operatorSocket);
   if (!operatorSocket) return;
 
@@ -181,23 +181,21 @@ CallManager.prototype.invOperator = function(vSocket, operatorId, msgType) {
   if (!oprSocket) return;
   logger.info('invOperator - get operatorSocket');
 
-  switch(msgType) {
+  var obj = {
+    from: vSocket.id,
+    to: operatorSocket,
+    vname: data.name
+  };
+  
+  switch(data.msgtype) {
     case MSGTYPE.INVITE_CALL:
       logger.info('invite call');
-      //send invite to operator
       //TODO more info will be sent to callee
-      oprSocket.emit(MSGTYPE.INVITE_CALL, {
-        from: vSocket.id,
-        to: operatorSocket
-      });
+      oprSocket.emit(MSGTYPE.INVITE_CALL, obj);
       break;
     case MSGTYPE.INVITE_CHAT:
       logger.info('invite chat');
-      //send invite chat
-      oprSocket.emit(MSGTYPE.INVITE_CHAT, {
-        from: vSocket.id,
-        to: operatorSocket/*more info*/
-      });
+      oprSocket.emit(MSGTYPE.INVITE_CHAT, obj);
       break;
   }
 
