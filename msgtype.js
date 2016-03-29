@@ -4,23 +4,27 @@
  */
 
 module.exports = {
+  //message header
   INVITE: 'invite',
-  INVITE_CHAT: 'chat',
-  INVITE_CALL: 'call',
 
   MESSAGE: 'message',
   RINGING: '180',
   ACCEPT: 'accept',
   DECLINE: 'decline',
 
-  //info
-  OPERATOR_SOCKET_ID: 'operatorid',
-
   //rely
   TRYING: '100',
   OK: '200',
   ACK: 'ack',
   BYE: 'bye',
+
+  //connect type
+  CHAT: 'chat',
+  VIDEO: 'video',
+  CALL: 'call',
+
+  //info
+  OPERATOR_SOCKET_ID: 'operatorid',
 
   //close
   DISCONNECT: 'disconnect',

@@ -19,9 +19,9 @@ function CallManager(io, config) {
  * @param client: socket client
  * @description: handle all message here
  */
-CallManager.prototype.handleClient = function(client) {
+CallManager.prototype.handleClient = function (client) {
   var self = this;
-  client.resources = { screen: false, video: true, audio: false };
+  client.resources = {screen: false, video: true, audio: false};
 
   //ringing message
   client.on(MSGTYPE.RINGING, function (message) {
@@ -32,18 +32,21 @@ CallManager.prototype.handleClient = function(client) {
   });
 
   //accept message
-  client.on(MSGTYPE.ACCEPT, function(message, cb) {
+  client.on(MSGTYPE.ACCEPT, function (message, cb) {
     logger.info('accept msg', message);
     var rec = self.io.to(message.to);
 
     //inform stun & turn server
-    self.sendServerInfoToClient(client, self.config);
-    self.sendServerInfoToClient(rec, self.config);
+    if (message.type !== MSGTYPE.CHAT) {
+      self.sendServerInfoToClient(client, self.config);
+      self.sendServerInfoToClient(rec, self.config);
+    }
 
     //forward accept message
-    rec.emit(MSGTYPE.ACCEPT , {
+    rec.emit(MSGTYPE.ACCEPT, {
       id: client.id,
-      resource: client.resources
+      resource: client.resources,
+      type: message.type
     });
   });
 
@@ -77,6 +80,7 @@ CallManager.prototype.handleClient = function(client) {
         id: client.id,
         type: type
       });
+
       if (!type) {
         client.leave(client.room);
         client.room = undefined;
@@ -89,7 +93,8 @@ CallManager.prototype.handleClient = function(client) {
     if (typeof name !== 'string')
       return;
 
-    cb = (typeof cb == 'function') ? cb : function () {};
+    cb = (typeof cb == 'function') ? cb : function () {
+    };
 
     // check if maximum number of clients reached
     if (this.config.rooms && this.config.rooms.maxClients > 0 &&
@@ -160,7 +165,7 @@ CallManager.prototype.handleClient = function(client) {
  * @param operatorId
  * @param socketId: socket id of operator
  */
-CallManager.prototype.addOperator = function(operatorId, socketId) {
+CallManager.prototype.addOperator = function (operatorId, socketId) {
   logger.info('an operator join');
   //add operator to list
   this.listOperator.set(operatorId, socketId);
@@ -171,7 +176,7 @@ CallManager.prototype.addOperator = function(operatorId, socketId) {
  * @param operatorId: target call/chat
  * @param msgType: chat/call
  */
-CallManager.prototype.invOperator = function(vSocket, data) {
+CallManager.prototype.invOperator = function (vSocket, data) {
   logger.info('receive visitor connect', data);
   var operatorSocket = this.listOperator.get(data.oid);
   logger.info('invOperator - get operatorSocketId', operatorSocket);
@@ -182,22 +187,15 @@ CallManager.prototype.invOperator = function(vSocket, data) {
   logger.info('invOperator - get operatorSocket');
 
   var obj = {
+    type: data.msgtype,   //
     from: vSocket.id,
     to: operatorSocket,
-    vname: data.name
+    name: data.name
   };
-  
-  switch(data.msgtype) {
-    case MSGTYPE.INVITE_CALL:
-      logger.info('invite call');
-      //TODO more info will be sent to callee
-      oprSocket.emit(MSGTYPE.INVITE_CALL, obj);
-      break;
-    case MSGTYPE.INVITE_CHAT:
-      logger.info('invite chat');
-      oprSocket.emit(MSGTYPE.INVITE_CHAT, obj);
-      break;
-  }
+
+  //invite
+  logger.info('invite', obj);
+  oprSocket.emit(MSGTYPE.INVITE, obj);
 
   //send trying back to visitor
   vSocket.emit(MSGTYPE.TRYING100, {});
@@ -208,7 +206,7 @@ CallManager.prototype.invOperator = function(vSocket, data) {
  * @param client: client socket
  * @param config: configuration of stun & server
  */
-CallManager.prototype.sendServerInfoToClient = function(client, config) {
+CallManager.prototype.sendServerInfoToClient = function (client, config) {
   // tell client about stun servers
   client.emit(MSGTYPE.STUNSERVER, config.stunservers || []);
 
@@ -219,17 +217,17 @@ CallManager.prototype.sendServerInfoToClient = function(client, config) {
   // allow selectively vending turn credentials based on origin.
   //var origin = client.handshake.headers.origin;
   //if (!config.turnorigins || config.turnorigins.indexOf(origin) !== -1) {
-    config.turnservers.forEach(function (server) {
-      var hmac = crypto.createHmac('sha1', server.secret);
-      // default to 86400 seconds timeout unless specified
-      var username = Math.floor(new Date().getTime() / 1000) + (server.expiry || 86400) + "";
-      hmac.update(username);
-      credentials.push({
-        username: username,
-        credential: hmac.digest('base64'),
-        urls: server.urls || server.url
-      });
+  config.turnservers.forEach(function (server) {
+    var hmac = crypto.createHmac('sha1', server.secret);
+    // default to 86400 seconds timeout unless specified
+    var username = Math.floor(new Date().getTime() / 1000) + (server.expiry || 86400) + "";
+    hmac.update(username);
+    credentials.push({
+      username: username,
+      credential: hmac.digest('base64'),
+      urls: server.urls || server.url
     });
+  });
   //}
 
   // tell client about turn servers
