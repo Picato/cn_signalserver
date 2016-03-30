@@ -17,8 +17,13 @@ module.exports = function (server, config) {
   //init CallManager
   var cm = new CM(io, config);
 
-  io.sockets.on('connection', function (client) {
+  io.sockets.on('connection', function (client, data) {
     cm.handleClient(client);
+
+    client.on('disconnect', function() {
+      console.log('client disconnect 123', client.id, client.peer);
+      cm.clientDisconnect(client.id);
+    })
   });
 
   //authenticate function
@@ -44,13 +49,16 @@ module.exports = function (server, config) {
     logger.info('post authenticate data', data);
 
     var operId = data.oid;
+
     if (data.isOperator) {
       //add socket callmanager
-      cm.addOperator(operId, socket.id);
+      cm.addUser(socket.id, operId);
     } else if (data.isVisitor) {
+      //add visitor operator
+      cm.addUser(socket.id);
+
       //is visitor, send msg to operator
       cm.invOperator(socket, data);
     }
   }
-
 };

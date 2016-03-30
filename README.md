@@ -7,11 +7,6 @@ It also supports vending STUN/TURN servers
  [this draft](http://tools.ietf.org/html/draft-uberti-behave-turn-rest-00).
  This mechanism is implemented e.g. by [rfc-5766-turn-server](https://code.google.com/p/rfc5766-turn-server/) or by a [patched version](https://github.com/otalk/restund) of [restund](http://creytiv.com/restund.html).
 
-Read more:
- - [Introducing SimpleWebRTC and conversat.io](http://blog.andyet.com/2013/02/22/introducing-simplewebrtcjs-and-conversatio/)
- - [SimpleWebRTC.com](http://simplewebrtc.com)
- - [talky.io](https://talky.io)
-
 ## Running
 
 Running the server requires a valid installation of node.js which can be installed from the nodejs.org website. After installing the package you will need to install the node dependencies.
@@ -25,8 +20,6 @@ Running the server requires a valid installation of node.js which can be install
                         "signal master is running at: http://localhost:8888"
 
 4) Open a web browser to the specified URL and port to ensure that the server is running properly. You should see the message
-
-                        "Welcome to socket.io"
 
 ### Production Environment
 * generate your ssl certs

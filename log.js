@@ -1,6 +1,3 @@
-/**
- * Created by tuan on 15/03/2016.
- */
 var logger = require('winston');
 
 //loggly system

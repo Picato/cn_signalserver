@@ -3,16 +3,16 @@
  */
 var uuid = require('node-uuid'),
   crypto = require('crypto'),
-  ArrayList = new require('arraylist'),
+  UserManager = require('./usermanager');
   MSGTYPE = require('./msgtype'),
   logger = require('winston');
+
 
 function CallManager(io, config) {
   this.io = io;
   this.config = config;
 
-  //store all operator socket.id
-  this.listOperator = new ArrayList();
+  this.userManager = new UserManager();
 }
 
 /**
@@ -32,7 +32,7 @@ CallManager.prototype.handleClient = function (client) {
   });
 
   //accept message
-  client.on(MSGTYPE.ACCEPT, function (message, cb) {
+  client.on(MSGTYPE.ACCEPT, function (message) {
     logger.info('accept msg', message);
     var rec = self.io.to(message.to);
 
@@ -48,6 +48,9 @@ CallManager.prototype.handleClient = function (client) {
       resource: client.resources,
       type: message.type
     });
+
+    //add client peer
+    self.userManager.addPeer(client.id, message.to);
   });
 
   // pass a message to another id
@@ -69,106 +72,18 @@ CallManager.prototype.handleClient = function (client) {
 
   client.on(MSGTYPE.UNSHARESCREEN, function () {
     client.resources.screen = false;
-    removeFeed('screen');
   });
-
-  client.on('join', join);
-
-  function removeFeed(type) {
-    if (client.room) {
-      io.sockets.in(client.room).emit('remove', {
-        id: client.id,
-        type: type
-      });
-
-      if (!type) {
-        client.leave(client.room);
-        client.room = undefined;
-      }
-    }
-  }
-
-  function join(name, cb) {
-    // sanity check
-    if (typeof name !== 'string')
-      return;
-
-    cb = (typeof cb == 'function') ? cb : function () {
-    };
-
-    // check if maximum number of clients reached
-    if (this.config.rooms && this.config.rooms.maxClients > 0 &&
-      io.sockets.clients(name).length >= this.config.rooms.maxClients) {
-      cb('full');
-      return;
-    }
-
-    // leave any existing rooms
-    removeFeed();
-    cb(null, describeRoom(name));
-    client.join(name);
-    client.room = name;
-  }
-
-  // we don't want to pass "leave" directly because the
-  // event type string of "socket end" gets passed too.
-  client.on(MSGTYPE.DISCONNECT, function () {
-    removeFeed();
-
-    //TODO if operator, remove from list operator
-  });
-
-  client.on(MSGTYPE.LEAVE, function () {
-    removeFeed();
-  });
-
-  client.on('create', function (name, cb) {
-    if (arguments.length == 2) {
-      name = name || uuid();
-    } else {
-      name = uuid();
-    }
-    cb = (typeof cb == 'function') ? cb : function () {};
-
-    // check if exists
-    var room = this.io.nsps['/'].adapter.rooms[name];
-    if (room && room.length) {
-      cb('taken');
-    } else {
-      join(name);
-      cb(null, name);
-    }
-  });
-
-  // support for logging full webrtc traces to std-out
-  // useful for large-scale error monitoring
-  client.on('trace', function (data) {
-    console.log('trace', JSON.stringify(
-      [data.type, data.session, data.prefix, data.peer, data.time, data.value]
-    ));
-  });
-
-  function describeRoom(name) {
-    var adapter = self.io.nsps['/'].adapter;
-    var clients = adapter.rooms[name] || {};
-    var result = {
-      clients: {}
-    };
-    Object.keys(clients).forEach(function (id) {
-      result.clients[id] = adapter.nsp.connected[id].resources;
-    });
-    return result;
-  }
 }
 
 /**
  * @param operatorId
  * @param socketId: socket id of operator
  */
-CallManager.prototype.addOperator = function (operatorId, socketId) {
+CallManager.prototype.addUser = function (id, operid) {
   logger.info('an operator join');
+
   //add operator to list
-  this.listOperator.set(operatorId, socketId);
+  this.userManager.addUser(id, operid);
 }
 
 /**
@@ -178,7 +93,7 @@ CallManager.prototype.addOperator = function (operatorId, socketId) {
  */
 CallManager.prototype.invOperator = function (vSocket, data) {
   logger.info('receive visitor connect', data);
-  var operatorSocket = this.listOperator.get(data.oid);
+  var operatorSocket = this.userManager.getOperSocketId(data.oid);
   logger.info('invOperator - get operatorSocketId', operatorSocket);
   if (!operatorSocket) return;
 
@@ -232,6 +147,28 @@ CallManager.prototype.sendServerInfoToClient = function (client, config) {
 
   // tell client about turn servers
   client.emit(MSGTYPE.TURNSERVER, credentials);
+}
+
+/**
+ * @type {CallManager}
+ * handle client disconnect
+ */
+CallManager.prototype.clientDisconnect = function(id) {
+  var self = this, socket;
+  console.log('handle client disconnected', id);
+
+  //get notify peers
+  var peers = self.userManager.getPeers(id);
+  if (!peers) return;
+
+  peers.forEach(function(peer){
+    socket = self.io.to(peer);
+
+    //forward accept message
+    socket.emit(MSGTYPE.LEAVE, {
+      id: id
+    });
+  });
 }
 
 module.exports = CallManager;
