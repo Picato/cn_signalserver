@@ -2,7 +2,7 @@ var config = require('getconfig'),
   fs = require('fs'),
   sockets = require('./sockets'),
   port = parseInt(process.env.PORT || config.server.port, 10),
-  logger = require('./log.js'),
+  logger = require('./log'),
   server = null;
 
 /**
