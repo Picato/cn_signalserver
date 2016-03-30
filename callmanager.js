@@ -80,7 +80,7 @@ CallManager.prototype.handleClient = function (client) {
  * @param socketId: socket id of operator
  */
 CallManager.prototype.addUser = function (id, operid) {
-  logger.info('an operator join');
+  logger.info('an operator join', id);
 
   //add operator to list
   this.userManager.addUser(id, operid);
@@ -169,6 +169,9 @@ CallManager.prototype.clientDisconnect = function(id) {
       id: id
     });
   });
+
+  //remote user
+  self.userManager.removeUser(id);
 }
 
 module.exports = CallManager;

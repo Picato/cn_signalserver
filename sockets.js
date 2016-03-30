@@ -17,11 +17,10 @@ module.exports = function (server, config) {
   //init CallManager
   var cm = new CM(io, config);
 
-  io.sockets.on('connection', function (client, data) {
+  io.sockets.on('connection', function (client) {
     cm.handleClient(client);
 
     client.on('disconnect', function() {
-      console.log('client disconnect 123', client.id, client.peer);
       cm.clientDisconnect(client.id);
     })
   });

@@ -30,6 +30,12 @@ UserManager.prototype.addUser = function(id, operid){
   }
 }
 
+UserManager.prototype.removeUser = function(id) {
+  _.remove(this.users, function(user) {
+    return user.id == id;
+  });
+}
+
 UserManager.prototype.getOperSocketId = function(operid) {
   var self = this;
   var ret = _.find(self.users, function(user) {
