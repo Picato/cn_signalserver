@@ -53,11 +53,11 @@ module.exports = function (server, config) {
       //add socket callmanager
       cm.addUser(socket.id, operId);
     } else if (data.isVisitor) {
-      //add visitor operator
+      //add visitor
       cm.addUser(socket.id);
 
       //is visitor, send msg to operator
-      cm.invOperator(socket, data);
+      //cm.invOperator(socket, data);
     }
   }
 };

@@ -1,8 +1,6 @@
 /**
  * Created by tuan on 30/03/2016.
  */
-
-
 var _ = require('lodash');
   //logger = require('winston');
 

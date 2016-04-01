@@ -23,6 +23,15 @@ CallManager.prototype.handleClient = function (client) {
   var self = this;
   client.resources = {screen: false, video: true, audio: false};
 
+  //handle invite message
+  client.on(MSGTYPE.INVITE, function(message) {
+    self.invOperator(client, {
+      name: message.name,
+      operator: message.operator,
+      type: message.type
+    });
+  });
+
   //ringing message
   client.on(MSGTYPE.RINGING, function (message) {
     var rec = self.io.to(message.to);
@@ -93,7 +102,7 @@ CallManager.prototype.addUser = function (id, operid) {
  */
 CallManager.prototype.invOperator = function (vSocket, data) {
   logger.info('receive visitor connect', data);
-  var operatorSocket = this.userManager.getOperSocketId(data.oid);
+  var operatorSocket = this.userManager.getOperSocketId(data.operator);
   logger.info('invOperator - get operatorSocketId', operatorSocket);
   if (!operatorSocket) return;
 
@@ -102,7 +111,7 @@ CallManager.prototype.invOperator = function (vSocket, data) {
   logger.info('invOperator - get operatorSocket');
 
   var obj = {
-    type: data.msgtype,   //
+    type: data.type,   //
     from: vSocket.id,
     to: operatorSocket,
     name: data.name
@@ -113,7 +122,7 @@ CallManager.prototype.invOperator = function (vSocket, data) {
   oprSocket.emit(MSGTYPE.INVITE, obj);
 
   //send trying back to visitor
-  vSocket.emit(MSGTYPE.TRYING100, {});
+  vSocket.emit(MSGTYPE.TRYING, {});
 }
 
 /**
