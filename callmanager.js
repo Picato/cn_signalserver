@@ -5,14 +5,17 @@ var uuid = require('node-uuid'),
   crypto = require('crypto'),
   UserManager = require('./usermanager');
   MSGTYPE = require('./msgtype'),
-  logger = require('winston');
-
+  logger = require('winston'),
+  ConekLogger = require('./coneklogger');
 
 function CallManager(io, config) {
   this.io = io;
   this.config = config;
 
   this.userManager = new UserManager();
+
+  //init conek logger
+  this.conekLogger = new ConekLogger(config.logapi);
 }
 
 /**
@@ -28,7 +31,8 @@ CallManager.prototype.handleClient = function (client) {
     self.invOperator(client, {
       name: message.name,
       operator: message.operator,
-      type: message.type
+      type: message.type,
+      conek: message.conek
     });
   });
 
@@ -55,6 +59,7 @@ CallManager.prototype.handleClient = function (client) {
     rec.emit(MSGTYPE.ACCEPT, {
       id: client.id,
       resource: client.resources,
+      conek: message.conek,
       type: message.type
     });
 
@@ -72,6 +77,10 @@ CallManager.prototype.handleClient = function (client) {
 
     details.from = client.id;
     otherClient.emit('message', details);
+
+    //handle log chat message
+    if (details.type == MSGTYPE.CHAT)
+      self.conekLogger.logchat(details);
   });
 
   //share screen
@@ -89,7 +98,7 @@ CallManager.prototype.handleClient = function (client) {
  * @param socketId: socket id of operator
  */
 CallManager.prototype.addUser = function (id, operid) {
-  logger.info('an operator join', id);
+  operid ? logger.info('an operator join', id) : logger.info('an visitor join', id);
 
   //add operator to list
   this.userManager.addUser(id, operid);
@@ -114,7 +123,8 @@ CallManager.prototype.invOperator = function (vSocket, data) {
     type: data.type,   //
     from: vSocket.id,
     to: operatorSocket,
-    name: data.name
+    name: data.name,
+    conek: data.conek
   };
 
   //invite

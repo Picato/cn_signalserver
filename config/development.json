@@ -27,5 +27,13 @@
   ],
 
   "secret": "ThisIsTheSecretKeyOfConekAbdbddsfjdfsajdfsjkjdsf",
-  "expiry": 864000
+  "expiry": 864000,
+
+  "logapi": {
+    "chat": "http://localhost/api/conek/logchat",
+    "call": "http://localhost/api/conek/logcall",
+    "misscall": "http://localhost/api/logmisscall",
+    "videocall": "http://localhost/api/logvideocall",
+    "missvideocall": "http://localhost/api/logmissvideocall"
+  }
 }
