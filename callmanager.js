@@ -29,6 +29,7 @@ CallManager.prototype.handleClient = function (client) {
   //handle invite message
   client.on(MSGTYPE.INVITE, function(message) {
     self.invOperator(client, {
+      id: message.id,
       name: message.name,
       operator: message.operator,
       type: message.type,
@@ -120,6 +121,7 @@ CallManager.prototype.invOperator = function (vSocket, data) {
   logger.info('invOperator - get operatorSocket');
 
   var obj = {
+    id: data.id,        //visitor id
     type: data.type,   //
     from: vSocket.id,
     to: operatorSocket,

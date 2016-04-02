@@ -12,7 +12,7 @@ ConekLogger.prototype.logchat = function(args) {
 
   var log = {
     conek: args.conek,
-    from: args.fromVisitor ? 'v' : 'o',
+    from: args.visitorid ? 'v' : 'o',
     content: args.payload.content
   }
 
