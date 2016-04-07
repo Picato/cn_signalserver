@@ -23,12 +23,18 @@ module.exports = {
   VIDEO: 'video',
   CALL: 'call',
 
+  //
+  UPDATEUSERID: 'updateid',
+  CALLOFF: 'calloff',
+  PEERCALLOFF: 'peercalloff',
+
   //info
   OPERATOR_SOCKET_ID: 'operatorid',
 
   //close
   DISCONNECT: 'disconnect',
   LEAVE: 'leave',
+  OWNERLEAVE: 'ownerleave',
 
   //screen
   SHARESCREEN: 'shareScreen',

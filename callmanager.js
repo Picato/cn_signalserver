@@ -6,6 +6,7 @@ var uuid = require('node-uuid'),
   UserManager = require('./usermanager');
   MSGTYPE = require('./msgtype'),
   logger = require('winston'),
+  _ = require('lodash'),
   ConekLogger = require('./coneklogger');
 
 function CallManager(io, config) {
@@ -28,13 +29,14 @@ CallManager.prototype.handleClient = function (client) {
 
   //handle invite message
   client.on(MSGTYPE.INVITE, function(message) {
-    self.invOperator(client, {
-      id: message.id,
-      name: message.name,
-      operator: message.operator,
-      type: message.type,
-      conek: message.conek
-    });
+    logger.info('invite msg--', message);
+
+    if (message.vid)  {   //vistor --> operator
+      self.invOperator(client, message);
+    } else {   //operator --> visitor
+      self.invVisitor(client, message);
+    }
+
   });
 
   //ringing message
@@ -47,14 +49,16 @@ CallManager.prototype.handleClient = function (client) {
 
   //accept message
   client.on(MSGTYPE.ACCEPT, function (message) {
-    logger.info('accept msg', message);
-    var rec = self.io.to(message.to);
+    logger.info('accept msg--', message);
+    var rec = self.io.sockets.connected[message.to];
 
     //inform stun & turn server
     if (message.type !== MSGTYPE.CHAT) {
+      logger.info('send server info');
       self.sendServerInfoToClient(client, self.config);
       self.sendServerInfoToClient(rec, self.config);
     }
+    logger.info('rec: ', message.to, message.from);
 
     //forward accept message
     rec.emit(MSGTYPE.ACCEPT, {
@@ -65,7 +69,19 @@ CallManager.prototype.handleClient = function (client) {
     });
 
     //add client peer
-    self.userManager.addPeer(client.id, message.to);
+    if (message.type == MSGTYPE.CHAT) {
+      self.userManager.addPeerChat(client.id, message.to);
+    } else {    //call
+      var caller = {
+        caller: message.caller,
+        callid: message.to
+      };
+      var callee = {
+        id: message.from,     //socket id of callee
+        callid: client.id       //socket id callee's call windows
+      }
+      self.userManager.addPeerCall(caller, callee);
+    }
   });
 
   // pass a message to another id
@@ -92,41 +108,44 @@ CallManager.prototype.handleClient = function (client) {
   client.on(MSGTYPE.UNSHARESCREEN, function () {
     client.resources.screen = false;
   });
+
+  client.on(MSGTYPE.UPDATEUSERID, function(details) {
+    logger.info('update id', details);
+    self.userManager.updateId(client.id, details.id);
+  })
 }
 
 /**
- * @param operatorId
- * @param socketId: socket id of operator
+ * @param id: socket id of operator
+ * @param oid: operator id
  */
-CallManager.prototype.addUser = function (id, operid) {
-  operid ? logger.info('an operator join', id) : logger.info('an visitor join', id);
-
+CallManager.prototype.addUser = function (id, oid) {
   //add operator to list
-  this.userManager.addUser(id, operid);
+  this.userManager.addUser(id, oid);
 }
 
 /**
- * @param vSocketId: visitor socket id
- * @param operatorId: target call/chat
- * @param msgType: chat/call
+ * @param from: visitor socket id
+ * @param data message from visitor
  */
-CallManager.prototype.invOperator = function (vSocket, data) {
+CallManager.prototype.invOperator = function (client, data) {
+  var self = this;
+
   logger.info('receive visitor connect', data);
   var operatorSocket = this.userManager.getOperSocketId(data.operator);
   logger.info('invOperator - get operatorSocketId', operatorSocket);
   if (!operatorSocket) return;
 
-  var oprSocket = this.io.to(operatorSocket);
+  var oprSocket = this.io.sockets.connected[operatorSocket];
   if (!oprSocket) return;
-  logger.info('invOperator - get operatorSocket');
 
   var obj = {
-    id: data.id,        //visitor id
-    type: data.type,   //
-    from: vSocket.id,
-    to: operatorSocket,
+    vid: data.vid,       //visitor id
     name: data.name,
-    conek: data.conek
+    conek: data.conek,
+    from: client.id,
+    to: operatorSocket,
+    type: data.type
   };
 
   //invite
@@ -134,8 +153,18 @@ CallManager.prototype.invOperator = function (vSocket, data) {
   oprSocket.emit(MSGTYPE.INVITE, obj);
 
   //send trying back to visitor
-  vSocket.emit(MSGTYPE.TRYING, {});
+  client.emit(MSGTYPE.TRYING, {});
+
+  //save visitor id
+  if (data.type != MSGTYPE.CHAT && data.sid)
+    self.userManager.updateVisitor(data.sid, data.vid);
 }
+
+/**
+ * @param from
+ * @param data
+ */
+CallManager.prototype.invVisitor = function(from, data){}
 
 /**
  * Inform client STUN/TURN's sever information
@@ -179,20 +208,48 @@ CallManager.prototype.clientDisconnect = function(id) {
   console.log('handle client disconnected', id);
 
   //get notify peers
-  var peers = self.userManager.getPeers(id);
-  if (!peers) return;
+  self.userManager.getCallPeers(id, function(err, type, user) {
+    if (err) return;
 
-  peers.forEach(function(peer){
-    socket = self.io.to(peer);
+    if (type == 'user') {
+      //inform peer
+      var peers = user.peers;
 
-    //forward accept message
-    socket.emit(MSGTYPE.LEAVE, {
-      id: id
-    });
+      peers.forEach(function(peer){
+        socket = self.io.sockets.connected[peer];
+
+        if (socket)
+          socket.emit(MSGTYPE.LEAVE, {
+            id: id
+          });
+      });
+
+      if (!_.isEmpty(user.call)) {
+        socket = self.io.sockets.connected[user.call.id];
+        if (socket)
+          socket.emit(MSGTYPE.OWNERLEAVE, {
+            id: id
+          });
+      }
+
+      //remote user
+      self.userManager.removeUser(id);
+    } else {  //type = 'call'
+      socket = self.io.sockets.connected[user.id];
+      if (socket)
+        socket.emit(MSGTYPE.CALLOFF, {
+          id: id
+        });
+
+      socket = self.io.sockets.connected[user.call.peer];
+      if (socket)
+        socket.emit(MSGTYPE.PEERCALLOFF, {
+          id: id
+        });
+
+      user.call = {};
+    }
   });
-
-  //remote user
-  self.userManager.removeUser(id);
 }
 
 module.exports = CallManager;

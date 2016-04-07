@@ -32,7 +32,7 @@ module.exports = function (server, config) {
     var key = data.key;
     var hash = crypto.createHmac('sha1', config.secret).update(key);
 
-    logger.info('received token ', token, ' key ', key);
+    logger.info('received data ', token, ' key ', key);
     //if (hash === token) {
     if (true) {
         callback(null, true);
@@ -44,20 +44,12 @@ module.exports = function (server, config) {
   //post authenticate
   function postAuthenticate(socket, data) {
     if (!data) return;
-
     logger.info('post authenticate data', data);
 
-    var operId = data.oid;
-
-    if (data.isOperator) {
-      //add socket callmanager
-      cm.addUser(socket.id, operId);
-    } else if (data.isVisitor) {
-      //add visitor
-      cm.addUser(socket.id);
-
-      //is visitor, send msg to operator
-      //cm.invOperator(socket, data);
+    if (data.isOperator || data.isVisitor) {
+      data.isOperator ? logger.info('operator join', socket.id) : logger.info('visitor join', socket.id);
+      //save user id <-> socket id
+      cm.addUser(socket.id, data.id);
     }
   }
 };

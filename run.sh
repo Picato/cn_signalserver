@@ -1,2 +1,2 @@
 #!/bin/bash
-NODE_ENV=production node server.js
+NODE_ENV=production nodemon server.js
