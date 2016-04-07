@@ -20,11 +20,19 @@
   ],
   "turnservers": [
     {
-      "urls": ["turn:your.turn.servers.here"],
-      "secret": "turnserversharedsecret",
+      "urls": ["turn:128.199.122.150"],
+      "secret": "viosoft1503vnus",
       "expiry": 86400
     }
   ],
   "secret": "ThisIsTheSecretKeyOfConekAbdbddsfjdfsajdfsjkjdsf",
-  "expiry": 864000
+  "expiry": 864000,
+
+  "logapi": {
+    "chat": "/api/conek/logchat",
+    "call": "/api/conek/logcall",
+    "misscall": "/api/logmisscall",
+    "videocall": "/api/logvideocall",
+    "missvideocall": "/api/logmissvideocall"
+  }
 }
