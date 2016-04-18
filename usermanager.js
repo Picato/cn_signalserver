@@ -14,8 +14,8 @@ function UserManager() {
 
 UserManager.prototype.addUser = function(id, userid) {
   var user = {
-    id: id,
-    userid: userid,
+    id: id,         //socket id
+    userid: userid, //operator id, null for visitor
     peers: [],
     call: {}
   }

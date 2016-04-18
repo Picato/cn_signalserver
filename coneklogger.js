@@ -33,7 +33,8 @@ ConekLogger.prototype.logcall = function(args) {
 
 ConekLogger.prototype.logmisscall = function(args) {
   var log = {
-    conek: args.conek
+    conek: args.conek,
+    from: args.visitorid ? 'v' : 'o'
   }
 
   this.client.post(this.restapi.misscall, {

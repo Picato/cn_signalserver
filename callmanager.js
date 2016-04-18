@@ -101,7 +101,7 @@ CallManager.prototype.handleClient = function (client) {
     logger.info('on message', details);
     if (!details) return;
 
-    var otherClient = self.io.to(details.to);
+    var otherClient = self.io.sockets.connected(details.to);
     if (!otherClient) return;
 
     details.from = client.id;
@@ -128,7 +128,7 @@ CallManager.prototype.handleClient = function (client) {
 }
 
 /**
- * @param id: socket id of operator
+ * @param id: socket id of operator/visitor
  * @param oid: operator id
  */
 CallManager.prototype.addUser = function (id, oid) {
