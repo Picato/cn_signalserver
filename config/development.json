@@ -32,8 +32,8 @@
   "logapi": {
     "chat": "http://localhost/api/conek/logchat",
     "call": "http://localhost/api/conek/logcall",
-    "misscall": "http://localhost/api/logmisscall",
-    "videocall": "http://localhost/api/logvideocall",
-    "missvideocall": "http://localhost/api/logmissvideocall"
+    "misscall": "http://localhost/api/conek/logmisscall",
+    "videocall": "http://localhost/api/conek/logvideocall",
+    "missvideocall": "http://localhost/api/conek/logmissvideocall"
   }
 }

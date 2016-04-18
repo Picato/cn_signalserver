@@ -84,6 +84,17 @@ CallManager.prototype.handleClient = function (client) {
     }
   });
 
+  //decline message
+  client.on(MSGTYPE.DECLINE, function(message) {
+    logger.info('decline msg', message);
+    var rec = self.io.sockets.connected[message.to];
+
+    //inform caller
+    rec.emit(MSGTYPE.DECLINE, {type: message.type});
+
+    //TODO log
+  });
+
   // pass a message to another id
   client.on(MSGTYPE.MESSAGE, function (details) {
     logger.info('on message', details);

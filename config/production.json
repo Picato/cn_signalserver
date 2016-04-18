@@ -29,10 +29,10 @@
   "expiry": 864000,
 
   "logapi": {
-    "chat": "/api/conek/logchat",
-    "call": "/api/conek/logcall",
-    "misscall": "/api/logmisscall",
-    "videocall": "/api/logvideocall",
-    "missvideocall": "/api/logmissvideocall"
+    "chat": "http://localhost/api/conek/logchat",
+    "call": "http://localhost/api/conek/logcall",
+    "misscall": "http://localhost/api/conek/logmisscall",
+    "videocall": "http://localhost/api/conek/logvideocall",
+    "missvideocall": "http://localhost/api/conek/logmissvideocall"
   }
 }
