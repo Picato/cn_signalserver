@@ -31,21 +31,18 @@ ConekLogger.prototype.logcall = function(args) {
   });
 }
 
-ConekLogger.prototype.logmisscall = function(args, cb) {
-  this.client.post(this.restapi.misscall, args, function(data) {
+ConekLogger.prototype.logmisscall = function(args) {
+  var log = {
+    conek: args.conek
+  }
 
+  this.client.post(this.restapi.misscall, {
+    json: log
+  }, function(error, response, body) {
+    if (!error && response.statusCode == 200) {
+      console.log(body)
+    }
   });
 }
 
-ConekLogger.prototype.logvideocall = function(args, cb) {
-  this.client.post(this.restapi.videocall, args, function(data) {
-
-  });
-}
-
-ConekLogger.prototype.logmissvideocall = function(args, cb) {
-  this.client.post(this.restapi.missvideocall, args, function(data) {
-
-  });
-}
 module.exports = ConekLogger;

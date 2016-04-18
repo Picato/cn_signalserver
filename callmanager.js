@@ -92,7 +92,8 @@ CallManager.prototype.handleClient = function (client) {
     //inform caller
     rec.emit(MSGTYPE.DECLINE, {type: message.type});
 
-    //TODO log
+    //log miscall
+    self.conekLogger.logmisscall(message);
   });
 
   // pass a message to another id
