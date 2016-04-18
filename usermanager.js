@@ -9,44 +9,67 @@ var _ = require('lodash'),
  *              will be upgrade to db/redis base
  */
 function UserManager() {
-  this.users = [];
+  this.operators = [];
+  this.visitors = [];
 }
 
-UserManager.prototype.addUser = function(id, userid) {
+UserManager.prototype.addVisitor = function(socket, data) {
   var user = {
-    id: id,         //socket id
-    userid: userid, //operator id, null for visitor
+    id: data.id,         //socket id
+    customer: data.customer,
+    socket: socket,
     peers: [],
     call: {}
-  }
-  this.users.push(user);
-  console.log('new user add', user);
-}
+  };
+  logger.info('visitor', user);
+  this.visitors.push(user);
+};
+
+UserManager.prototype.addOperator = function(socket, data) {
+  var user = {
+    id: data.id,         //socket id
+    socket: socket,
+    customer: data.customer,
+    peers: [],
+    call: {}
+  };
+  logger.info('operator', user);
+  this.operators.push(user);
+};
+
+UserManager.prototype.getOperSocketId = function(operid) {
+  var self = this;
+  var ret = _.find(self.operators, function(user) {
+    return user.id == operid;
+  });
+
+  return ret ? ret.socket : null;
+};
 
 UserManager.prototype.removeUser = function(id) {
   _.remove(this.users, function(user) {
     return user.id == id;
   });
-}
-
-UserManager.prototype.getOperSocketId = function(operid) {
-  var self = this;
-  var ret = _.find(self.users, function(user) {
-    return user.userid == operid;
-  });
-
-  return ret ? ret.id : null;
-}
+};
 
 //visitor & operator
-UserManager.prototype.addPeerChat = function(peer1, peer2) {
-  var peers = this.getPeers(peer1);
-  if (peers)
-    peers.push(peer2);
+UserManager.prototype.addPeerChat = function(peer1, peer2, from) {
+  var self = this;
+  if (from == 'operator') {
+    //search operator
+    var opr = _.find(self.operators, function(o) {
+      return o.socket == peer1;
+    });
+    if (opr)
+      opr.peers.push(peer2);
 
-  peers = this.getPeers(peer2);
-  if (peers)
-    peers.push(peer1);
+    //search visitor
+    var v = _.find(self.visitors, function(v) {
+      return v.socket == peer2;
+    });
+    if (v)
+      v.peers.push(peer2);
+  }
 }
 
 /**
@@ -126,4 +149,5 @@ UserManager.prototype.updateId = function(sid, newid) {
 
   console.log(self.users);
 }
+
 module.exports = UserManager;

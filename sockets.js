@@ -44,12 +44,10 @@ module.exports = function (server, config) {
   //post authenticate
   function postAuthenticate(socket, data) {
     if (!data) return;
-    logger.info('post authenticate data', data);
 
-    if (data.isOperator || data.isVisitor) {
-      data.isOperator ? logger.info('operator join', socket.id) : logger.info('visitor join', socket.id);
-      //save user id <-> socket id
-      cm.addUser(socket.id, data.id);
-    }
+    logger.info('post authenticate data', data);
+    data.type == 'visitor' ? logger.info('visitor join') : logger.info('operator join')
+
+    cm.addUser(socket.id, data);
   }
 };

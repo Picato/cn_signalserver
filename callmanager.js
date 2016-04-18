@@ -41,7 +41,7 @@ CallManager.prototype.handleClient = function (client) {
 
   //ringing message
   client.on(MSGTYPE.RINGING, function (message) {
-    var rec = self.io.to(message.to);
+    var rec = self.io.sockets.connected[message.to];
 
     //forward message
     rec.emit(MSGTYPE.RINGING, message);
@@ -70,7 +70,7 @@ CallManager.prototype.handleClient = function (client) {
 
     //add client peer
     if (message.type == MSGTYPE.CHAT) {
-      self.userManager.addPeerChat(client.id, message.to);
+      self.userManager.addPeerChat(client.id, message.to, message.sender);
     } else {    //call
       var caller = {
         caller: message.caller,
@@ -101,7 +101,7 @@ CallManager.prototype.handleClient = function (client) {
     logger.info('on message', details);
     if (!details) return;
 
-    var otherClient = self.io.sockets.connected(details.to);
+    var otherClient = self.io.sockets.connected[details.to];
     if (!otherClient) return;
 
     details.from = client.id;
@@ -131,9 +131,13 @@ CallManager.prototype.handleClient = function (client) {
  * @param id: socket id of operator/visitor
  * @param oid: operator id
  */
-CallManager.prototype.addUser = function (id, oid) {
+CallManager.prototype.addUser = function (socket, data) {
   //add operator to list
-  this.userManager.addUser(id, oid);
+  if (data.type == 'visitor') {
+    this.userManager.addVisitor(socket, data);
+  } else {  //operator
+    this.userManager.addOperator(socket, data)
+  }
 }
 
 /**
@@ -142,8 +146,6 @@ CallManager.prototype.addUser = function (id, oid) {
  */
 CallManager.prototype.invOperator = function (client, data) {
   var self = this;
-
-  logger.info('receive visitor connect', data);
   var operatorSocket = this.userManager.getOperSocketId(data.operator);
   logger.info('invOperator - get operatorSocketId', operatorSocket);
   if (!operatorSocket) return;
@@ -190,10 +192,6 @@ CallManager.prototype.sendServerInfoToClient = function (client, config) {
   // create shared secret nonces for TURN authentication
   // the process is described in draft-uberti-behave-turn-rest
   var credentials = [];
-
-  // allow selectively vending turn credentials based on origin.
-  //var origin = client.handshake.headers.origin;
-  //if (!config.turnorigins || config.turnorigins.indexOf(origin) !== -1) {
   config.turnservers.forEach(function (server) {
     var hmac = crypto.createHmac('sha1', server.secret);
     // default to 86400 seconds timeout unless specified
