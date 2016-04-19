@@ -19,7 +19,7 @@ UserManager.prototype.addVisitor = function(socket, data) {
     customer: data.customer,
     socket: socket,
     peers: [],
-    call: {}
+    call: {/*socket, peer*/}
   };
   logger.info('visitor', user);
   this.visitors.push(user);
@@ -46,10 +46,15 @@ UserManager.prototype.getOperSocketId = function(operid) {
   return ret ? ret.socket : null;
 };
 
-UserManager.prototype.removeUser = function(id) {
-  _.remove(this.users, function(user) {
-    return user.id == id;
-  });
+UserManager.prototype.removeUser = function(socket, type) {
+  if (type == 'visitor')
+    _.remove(this.visitors, function(user) {
+      return user.socket == socket;
+    });
+  else
+    _.remove(this.visitors, function(user) {
+      return user.socket == socket;
+    });
 };
 
 //visitor & operator
@@ -124,13 +129,20 @@ UserManager.prototype.getCallPeers = function(id, cb) {
   var self = this;
   var type;
 
-  var user = _.find(self.users, function(u) {
-    if (u.id == id) { type = 'user'; return true; }
-    if (u.call.id == id) { type = 'call'; return true;}
+  var user = _.find(self.operators, function(u) {
+    if (u.socket == id) { type = 'operator'; return true; }
+    if (u.call.socket == id) { type = 'call'; return true;}
+    return false;
+  });
+  if (user)
+    return cb(null, type, user);
+
+  user = _.find(self.operators, function(u) {
+    if (u.socket == id) { type = 'visitor'; return true; }
+    if (u.call.socket == id) { type = 'call'; return true;}
     return false;
   });
 
-  console.log(user, type);
   if (user)
     return cb(null, type, user);
 

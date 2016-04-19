@@ -217,11 +217,11 @@ CallManager.prototype.clientDisconnect = function(id) {
   var self = this, socket;
   console.log('handle client disconnected', id);
 
-  //get notify peers
+  //remove user as socket id
   self.userManager.getCallPeers(id, function(err, type, user) {
     if (err) return;
 
-    if (type == 'user') {
+    if (type != 'call') {
       //inform peer
       var peers = user.peers;
 
@@ -235,7 +235,7 @@ CallManager.prototype.clientDisconnect = function(id) {
       });
 
       if (!_.isEmpty(user.call)) {
-        socket = self.io.sockets.connected[user.call.id];
+        socket = self.io.sockets.connected[user.call.socket];
         if (socket)
           socket.emit(MSGTYPE.OWNERLEAVE, {
             id: id
@@ -243,8 +243,9 @@ CallManager.prototype.clientDisconnect = function(id) {
       }
 
       //remote user
-      self.userManager.removeUser(id);
-    } else {  //type = 'call'
+      self.userManager.removeUser(id, type);
+    }
+    else {  //type = 'call'
       socket = self.io.sockets.connected[user.id];
       if (socket)
         socket.emit(MSGTYPE.CALLOFF, {
