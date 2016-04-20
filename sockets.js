@@ -27,7 +27,7 @@ module.exports = function (server, config) {
 
   //authenticate function
   function authenticate(socket, data, callback) {
-    logger.debug(socket.id);
+    logger.debug('request authenticate', socket.id);
     var token = data.token;
     var key = data.key;
     var hash = crypto.createHmac('sha1', config.secret).update(key);
@@ -46,8 +46,8 @@ module.exports = function (server, config) {
     if (!data) return;
 
     logger.info('post authenticate data', data);
-    data.type == 'visitor' ? logger.info('visitor join') : logger.info('operator join')
-
-    cm.addUser(socket.id, data);
+    data.type == 'visitor' ? logger.info('visitor join') : logger.info('operator join');
+    if (data.type == 'visitor' || data.type == 'operator')
+      cm.addUser(socket.id, data);
   }
 };

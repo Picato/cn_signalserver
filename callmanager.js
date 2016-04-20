@@ -72,13 +72,15 @@ CallManager.prototype.handleClient = function (client) {
     if (message.type == MSGTYPE.CHAT) {
       self.userManager.addPeerChat(client.id, message.to, message.sender);
     } else {    //call
-      var caller = {
-        caller: message.caller,
-        callid: message.to
-      };
       var callee = {
-        id: message.from,     //socket id of callee
-        callid: client.id       //socket id callee's call windows
+        peerid: message.caller,
+        ptalksocket: message.to,
+        talksocket: client.id
+      };
+      var caller = {
+        psocket: message.from,
+        ptalksocket: client.id,
+        talksocket: message.to
       }
       self.userManager.addPeerCall(caller, callee);
     }
@@ -212,13 +214,14 @@ CallManager.prototype.sendServerInfoToClient = function (client, config) {
 /**
  * @type {CallManager}
  * handle client disconnect
+ * @param id socket id
  */
 CallManager.prototype.clientDisconnect = function(id) {
   var self = this, socket;
   console.log('handle client disconnected', id);
 
   //remove user as socket id
-  self.userManager.getCallPeers(id, function(err, type, user) {
+  self.userManager.getPeers(id, function(err, type, user) {
     if (err) return;
 
     if (type != 'call') {
@@ -230,7 +233,7 @@ CallManager.prototype.clientDisconnect = function(id) {
 
         if (socket)
           socket.emit(MSGTYPE.LEAVE, {
-            id: id
+            id: user.id
           });
       });
 
