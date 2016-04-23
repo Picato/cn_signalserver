@@ -72,16 +72,16 @@ CallManager.prototype.handleClient = function (client) {
     if (message.type == MSGTYPE.CHAT) {
       self.userManager.addPeerChat(client.id, message.to, message.sender);
     } else {    //call
-      var callee = {
-        peerid: message.caller,
-        ptalksocket: message.to,
-        talksocket: client.id
+      var caller = {      //visitor info
+        id: message.caller,
+        peertalks: message.to,
+        talks: client.id
       };
-      var caller = {
-        psocket: message.from,
-        ptalksocket: client.id,
-        talksocket: message.to
-      }
+      var callee = {      //operator info
+        id: message.callee,
+        peertalks: client.id,
+        talks: message.to
+      };
       self.userManager.addPeerCall(caller, callee);
     }
   });
@@ -217,14 +217,15 @@ CallManager.prototype.sendServerInfoToClient = function (client, config) {
  * @param id socket id
  */
 CallManager.prototype.clientDisconnect = function(id) {
-  var self = this, socket;
+  var self = this;
   console.log('handle client disconnected', id);
 
   //remove user as socket id
   self.userManager.getPeers(id, function(err, type, user) {
     if (err) return;
 
-    if (type != 'call') {
+    var socket;
+    if (type == 'operator' || type == 'visitor') {
       //inform peer
       var peers = user.peers;
 
@@ -237,8 +238,15 @@ CallManager.prototype.clientDisconnect = function(id) {
           });
       });
 
+      //inform call
       if (!_.isEmpty(user.call)) {
-        socket = self.io.sockets.connected[user.call.socket];
+        socket = self.io.sockets.connected[user.call.talks];
+        if (socket)
+          socket.emit(MSGTYPE.OWNERLEAVE, {
+            id: id
+          });
+
+        socket = self.io.sockets.connected[user.call.peertalks];
         if (socket)
           socket.emit(MSGTYPE.OWNERLEAVE, {
             id: id
@@ -249,19 +257,28 @@ CallManager.prototype.clientDisconnect = function(id) {
       self.userManager.removeUser(id, type);
     }
     else {  //type = 'call'
-      socket = self.io.sockets.connected[user.id];
+      //inform owner
+      socket = self.io.sockets.connected[user.socket];
       if (socket)
         socket.emit(MSGTYPE.CALLOFF, {
           id: id
         });
 
-      socket = self.io.sockets.connected[user.call.peer];
+      //inform peer
+      socket = self.io.sockets.connected[user.call.socket];
       if (socket)
         socket.emit(MSGTYPE.PEERCALLOFF, {
           id: id
         });
 
-      user.call = {};
+      //inform peer talk
+      socket = self.io.sockets.connected[user.call.peertalks];
+      if (socket)
+        socket.emit(MSGTYPE.PEERCALLOFF, {
+          id: id
+        });
+
+      self.userManager.removePeerCall(user, type);
     }
   });
 }
