@@ -133,18 +133,21 @@ UserManager.prototype.removePeerCall = function(user, type) {
   var self = this;
   var peerId = user.call.id, peer;
 
-  if (type == 'visitor-call') {
-    peer = _find(self.visitors, function(v) {
-      v.id == peerId;
+  if (type == 'operator-call') {
+    peer = _.find(self.visitors, function(v) {
+      return v.id == peerId;
     });
-  } else {  //type == 'operator-call'
-    peer = _find(self.operator, function(o) {
-      o.id == peerId;
+  } else {  //type == 'visitor-call'
+    peer = _.find(self.operators, function(o) {
+      return o.id == peerId;
     });
   }
   if (peer)
     peer.call = {};
   user.call = {};
+
+  logger.info('operators', self.operators, type);
+  logger.info('visitor', self.visitors);
 }
 UserManager.prototype.getPeers = function(id, cb) {
   var self = this;

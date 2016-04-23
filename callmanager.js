@@ -75,12 +75,14 @@ CallManager.prototype.handleClient = function (client) {
       var caller = {      //visitor info
         id: message.caller,
         peertalks: message.to,
-        talks: client.id
+        talks: client.id,
+        conek: message.conek
       };
       var callee = {      //operator info
         id: message.callee,
         peertalks: client.id,
-        talks: message.to
+        talks: message.to,
+        conek: message.conek
       };
       self.userManager.addPeerCall(caller, callee);
     }
@@ -261,21 +263,22 @@ CallManager.prototype.clientDisconnect = function(id) {
       socket = self.io.sockets.connected[user.socket];
       if (socket)
         socket.emit(MSGTYPE.CALLOFF, {
-          id: id
+          id: user.call.id,
+          conek: user.call.conek
         });
 
       //inform peer
       socket = self.io.sockets.connected[user.call.socket];
       if (socket)
         socket.emit(MSGTYPE.PEERCALLOFF, {
-          id: id
+          conek: user.call.conek
         });
 
       //inform peer talk
       socket = self.io.sockets.connected[user.call.peertalks];
       if (socket)
         socket.emit(MSGTYPE.PEERCALLOFF, {
-          id: id
+          conek: user.call.conek
         });
 
       self.userManager.removePeerCall(user, type);

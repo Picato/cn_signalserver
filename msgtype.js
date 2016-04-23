@@ -27,6 +27,7 @@ module.exports = {
   UPDATEUSERID: 'updateid',
   CALLOFF: 'calloff',
   PEERCALLOFF: 'peercalloff',
+  PEEROWNERLEAVE: 'peerownerleave',
 
   //info
   OPERATOR_SOCKET_ID: 'operatorid',
