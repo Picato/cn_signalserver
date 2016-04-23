@@ -271,6 +271,7 @@ CallManager.prototype.clientDisconnect = function(id) {
       socket = self.io.sockets.connected[user.call.socket];
       if (socket)
         socket.emit(MSGTYPE.PEERCALLOFF, {
+          id: user.id,
           conek: user.call.conek
         });
 

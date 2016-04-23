@@ -146,7 +146,7 @@ UserManager.prototype.removePeerCall = function(user, type) {
     peer.call = {};
   user.call = {};
 
-  logger.info('operators', self.operators, type);
+  logger.info('operators', self.operators);
   logger.info('visitor', self.visitors);
 }
 UserManager.prototype.getPeers = function(id, cb) {
