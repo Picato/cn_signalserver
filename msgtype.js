@@ -29,6 +29,11 @@ module.exports = {
   PEERCALLOFF: 'peercalloff',
   PEEROWNERLEAVE: 'peerownerleave',
 
+  //online visitor
+  NUMBER_VISITOR: 'numbervisitor',
+  VISITOR_JOIN: 'visitorjoin',
+  VISITOR_LEAVE: 'visitorleave',
+
   //info
   OPERATOR_SOCKET_ID: 'operatorid',
 

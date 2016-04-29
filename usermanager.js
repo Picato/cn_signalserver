@@ -13,7 +13,8 @@ function UserManager() {
   this.visitors = [];
 }
 
-UserManager.prototype.addVisitor = function(socket, data) {
+UserManager.prototype.addVisitor = function(socket, data, cb) {
+  var self = this;
   var user = {
     id: data.id,         //socket id
     customer: data.customer,
@@ -23,9 +24,22 @@ UserManager.prototype.addVisitor = function(socket, data) {
   };
   logger.info('visitor', user);
   this.visitors.push(user);
+
+  //find all operators
+  var opers = _.filter(self.operators, function(o) {
+    return o.customer == data.customer;
+  });
+
+  var operSockets = [];
+  _.each(opers, function(o) {
+    operSockets.push(o.socket);
+  });
+
+  return cb(null, operSockets);
 };
 
-UserManager.prototype.addOperator = function(socket, data) {
+UserManager.prototype.addOperator = function(socket, data, cb) {
+  var self = this;
   var user = {
     id: data.id,         //socket id
     socket: socket,
@@ -35,6 +49,12 @@ UserManager.prototype.addOperator = function(socket, data) {
   };
   logger.info('operator', user);
   this.operators.push(user);
+
+  //count number of visitor
+  var visitors = _.filter(self.visitors, function(v) {
+    return v.customer == data.customer;
+  });
+  return cb(null, visitors.length);
 };
 
 UserManager.prototype.getOperSocketId = function(operid) {
@@ -172,7 +192,16 @@ UserManager.prototype.getPeers = function(id, cb) {
     return cb(null, type, user);
 
   return cb({error: 'not found'});
-}
+};
+
+UserManager.prototype.getOperatorsByCustomer = function(id, cb) {
+  var self = this;
+  var operators = _.filter(self.operators, function(operator) {
+    return operator.customer == id;
+  });
+
+  return cb(null, operators);
+};
 
 UserManager.prototype.updateId = function(sid, newid) {
   var self = this;

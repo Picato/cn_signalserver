@@ -136,11 +136,25 @@ CallManager.prototype.handleClient = function (client) {
  * @param oid: operator id
  */
 CallManager.prototype.addUser = function (socket, data) {
+  var self = this;
   //add operator to list
   if (data.type == 'visitor') {
-    this.userManager.addVisitor(socket, data);
+    this.userManager.addVisitor(socket, data, function(err, operators) {
+      //list operators to be inform
+      if (err || _.isEmpty(operators))
+        return;
+      _.each(operators, function(o) {
+        var s = self.io.sockets.connected[o];
+        s.emit(MSGTYPE.VISITOR_JOIN, {});
+      });
+    });
   } else {  //operator
-    this.userManager.addOperator(socket, data)
+    this.userManager.addOperator(socket, data, function (err, numberVisitor) {
+      if (err || numberVisitor == 0)
+        return;
+      var s = self.io.sockets.connected[socket];
+      s.emit(MSGTYPE.NUMBER_VISITOR, {number: numberVisitor});
+    });
   }
 }
 
@@ -231,7 +245,7 @@ CallManager.prototype.clientDisconnect = function(id) {
       //inform peer
       var peers = user.peers;
 
-      peers.forEach(function(peer){
+      _.each(peers, function(peer){
         socket = self.io.sockets.connected[peer];
 
         if (socket)
@@ -257,6 +271,20 @@ CallManager.prototype.clientDisconnect = function(id) {
 
       //remote user
       self.userManager.removeUser(id, type);
+
+      //inform visitor off
+      if (type == 'visitor') {
+        self.userManager.getOperatorsByCustomer(user.customer, function(err, operators){
+          if (err)
+            return;
+
+          _.each(operators, function(operator) {
+            socket = self.io.sockets.connected[operator.socket];
+            if (socket)
+              socket.emit(MSGTYPE.VISITOR_LEAVE);
+          });
+        });
+      }
     }
     else {  //type = 'call'
       //inform owner
