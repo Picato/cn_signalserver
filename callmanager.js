@@ -145,7 +145,8 @@ CallManager.prototype.addUser = function (socket, data) {
         return;
       _.each(operators, function(o) {
         var s = self.io.sockets.connected[o];
-        s.emit(MSGTYPE.VISITOR_JOIN, {});
+        if (s)
+          s.emit(MSGTYPE.VISITOR_JOIN, {});
       });
     });
   } else {  //operator
@@ -153,7 +154,9 @@ CallManager.prototype.addUser = function (socket, data) {
       if (err || numberVisitor == 0)
         return;
       var s = self.io.sockets.connected[socket];
-      s.emit(MSGTYPE.NUMBER_VISITOR, {number: numberVisitor});
+
+      if (s)
+        s.emit(MSGTYPE.NUMBER_VISITOR, {number: numberVisitor});
     });
   }
 }

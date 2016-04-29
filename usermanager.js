@@ -169,6 +169,7 @@ UserManager.prototype.removePeerCall = function(user, type) {
   logger.info('operators', self.operators);
   logger.info('visitor', self.visitors);
 }
+
 UserManager.prototype.getPeers = function(id, cb) {
   var self = this;
   var type;
