@@ -31,12 +31,11 @@ CallManager.prototype.handleClient = function (client) {
   client.on(MSGTYPE.INVITE, function(message) {
     logger.info('invite msg--', message);
 
-    if (message.vid)  {   //vistor --> operator
+    if (message.to == 'o')  {   //vistor --> operator
       self.invOperator(client, message);
     } else {   //operator --> visitor
       self.invVisitor(client, message);
     }
-
   });
 
   //ringing message
@@ -52,14 +51,7 @@ CallManager.prototype.handleClient = function (client) {
     logger.info('accept msg--', message);
     var rec = self.io.sockets.connected[message.to];
 
-    //inform stun & turn server
-    if (message.type !== MSGTYPE.CHAT) {
-      logger.info('send server info');
-      self.sendServerInfoToClient(client, self.config);
-      self.sendServerInfoToClient(rec, self.config);
-    }
-    logger.info('rec: ', message.to, message.from);
-
+    logger.info('forward accept msg');
     //forward accept message
     rec.emit(MSGTYPE.ACCEPT, {
       id: client.id,
@@ -68,9 +60,16 @@ CallManager.prototype.handleClient = function (client) {
       type: message.type
     });
 
+    //inform stun & turn server
+    if (message.type !== MSGTYPE.CHAT) {
+      logger.info('send server info');
+      self.sendServerInfoToClient(client, self.config);
+      self.sendServerInfoToClient(rec, self.config);
+    }
+
     //add client peer
     if (message.type == MSGTYPE.CHAT) {
-      self.userManager.addPeerChat(client.id, message.to, message.sender);
+      self.userManager.addPeerChat(message.oid, message.vid);
     } else {    //call
       var caller = {      //visitor info
         id: message.caller,
@@ -107,11 +106,18 @@ CallManager.prototype.handleClient = function (client) {
     logger.info('on message', details);
     if (!details) return;
 
-    var otherClient = self.io.sockets.connected[details.to];
-    if (!otherClient) return;
+    //find all sockets
+    var sockets = self.userManager.getSendSockets(details);
+    if (!sockets || sockets.length == 0) return;
 
-    details.from = client.id;
-    otherClient.emit('message', details);
+    var peerS;
+    _.each(sockets, function(s) {
+      peerS = self.io.sockets.connected[s];
+      if (!peerS) return;
+
+      details.from = client.id;
+      peerS.emit('message', details);
+    });
 
     //handle log chat message
     if (details.type == MSGTYPE.CHAT)
@@ -140,27 +146,13 @@ CallManager.prototype.handleClient = function (client) {
 CallManager.prototype.addUser = function (socket, data) {
   var self = this;
   //add operator to list
-  if (data.type == 'visitor') {
-    this.userManager.addVisitor(socket, data, function(err, operators) {
-      //list operators to be inform
-      if (err || _.isEmpty(operators))
-        return;
-      _.each(operators, function(o) {
-        var s = self.io.sockets.connected[o];
-        if (s)
-          s.emit(MSGTYPE.VISITOR_JOIN, {});
-      });
-    });
-  } else {  //operator
-    this.userManager.addOperator(socket, data, function (err, numberVisitor) {
-      if (err || numberVisitor == 0)
-        return;
-      var s = self.io.sockets.connected[socket];
+  this.userManager.addUser(data.type, socket, data, function(err, details) {
+    if (err) {
+      //TODO handle add user's invalid
+      return;
+    }
 
-      if (s)
-        s.emit(MSGTYPE.NUMBER_VISITOR, {number: numberVisitor});
-    });
-  }
+  });
 }
 
 /**
@@ -169,32 +161,32 @@ CallManager.prototype.addUser = function (socket, data) {
  */
 CallManager.prototype.invOperator = function (client, data) {
   var self = this;
-  var operatorSocket = this.userManager.getOperSocketId(data.operator);
-  logger.info('invOperator - get operatorSocketId', operatorSocket);
-  if (!operatorSocket) return;
+  var operators = this.userManager.getOperatorSockets(data.cid, data.oid);
 
-  var oprSocket = this.io.sockets.connected[operatorSocket];
-  if (!oprSocket) return;
+  logger.info('invOperator - get operators', operators);
+  if (!operators || operators.length == 0) return;
 
   var obj = {
     vid: data.vid,       //visitor id
     name: data.name,
     conek: data.conek,
     from: client.id,
-    to: operatorSocket,
     type: data.type
   };
 
   //invite
   logger.info('invite', obj);
-  oprSocket.emit(MSGTYPE.INVITE, obj);
+  var oprSocket;
+  _.each(operators, function(s) {
+    oprSocket = self.io.sockets.connected[s];
+
+    if (!oprSocket) return;
+
+    oprSocket.emit(MSGTYPE.INVITE, obj);
+  });
 
   //send trying back to visitor
   client.emit(MSGTYPE.TRYING, {});
-
-  //save visitor id
-  if (data.type != MSGTYPE.CHAT && data.sid)
-    self.userManager.updateVisitor(data.sid, data.vid);
 }
 
 /**
@@ -226,7 +218,6 @@ CallManager.prototype.sendServerInfoToClient = function (client, config) {
       urls: server.urls || server.url
     });
   });
-  //}
 
   // tell client about turn servers
   client.emit(MSGTYPE.TURNSERVER, credentials);

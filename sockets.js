@@ -22,7 +22,7 @@ module.exports = function (server, config) {
 
     client.on('disconnect', function() {
       cm.clientDisconnect(client.id);
-    })
+    });
   });
 
   //authenticate function

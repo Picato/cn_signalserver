@@ -9,63 +9,144 @@ var _ = require('lodash'),
  *              will be upgrade to db/redis base
  */
 function UserManager() {
-  this.operators = [];
-  this.visitors = [];
+  this.list = [];
 }
 
-UserManager.prototype.addVisitor = function(socket, data, cb) {
-  var self = this;
-  var user = {
+UserManager.prototype.addUser = function(type, socket, data, cb) {
+  var self = this, user;
+
+  //find customer
+  var customer = _.find(self.list, function(c) {
+    return c.id == data.customer;
+  });
+
+  if (!customer) {
+    customer = {
+      id: data.customer,
+      operators: [],
+      visitors: []
+    }
+    //create new user
+    user = {
+      id: data.id,   //db id
+      sockets: [],
+      peers: [],
+      call: {/*socket, peer*/},
+      join: new Date()
+    };
+    user.sockets.push(socket);
+
+    //check type
+    if (type == 'visitor') {
+      customer.visitors.push(user);
+    } else {
+      customer.operators.push(user);
+    }
+    self.list.push(customer);
+    return cb(null, null);
+  }
+
+  //find visitor in visitor list
+  if (type == 'visitor') {
+    user = _.find(customer.visitors, function(v) {
+      return v.id == data.id;
+    });
+  } else {
+    user = _.find(customer.operators, function(o) {
+      return o.id == data.id;
+    });
+  }
+
+  if (user) {
+    user.sockets.push(socket);
+
+    //TODO if operator send back all visitor's information
+    return cb(null);
+  }
+
+  //create new visitor
+  user = {
     id: data.id,         //socket id
-    customer: data.customer,
-    socket: socket,
+    sockets: [],
     peers: [],
-    call: {/*socket, peer*/}
+    call: {/*socket, peer*/},
+    join: new Date()
   };
-  logger.info('visitor', user);
-  this.visitors.push(user);
+  user.sockets.push(socket);
+
+  if (type == 'visitor') {
+    customer.visitors.push(user);
+  } else {
+    customer.operators.push(user);
+  }
+  logger.info('user', user, customer);
 
   //find all operators
-  var opers = _.filter(self.operators, function(o) {
-    return o.customer == data.customer;
-  });
+  //var opers = _.filter(self.operators, function(o) {
+  //  return o.customer == data.customer;
+  //});
+  //
+  //var operSockets = [];
+  //_.each(opers, function(o) {
+  //  operSockets.push(o.socket);
+  //});
 
-  var operSockets = [];
-  _.each(opers, function(o) {
-    operSockets.push(o.socket);
-  });
-
-  return cb(null, operSockets);
+  //return cb(null, operSockets);
+  return cb(null, null);
 };
 
-UserManager.prototype.addOperator = function(socket, data, cb) {
+/**
+ * @param cid customer id
+ * @param oid operator id
+ * @returns sockets of a operator
+ */
+UserManager.prototype.getOperatorSockets = function(cid, oid) {
   var self = this;
-  var user = {
-    id: data.id,         //socket id
-    socket: socket,
-    customer: data.customer,
-    peers: [],
-    call: {}
-  };
-  logger.info('operator', user);
-  this.operators.push(user);
 
-  //count number of visitor
-  var visitors = _.filter(self.visitors, function(v) {
-    return v.customer == data.customer;
+  //find customer
+  var customer = _.find(self.list, function(l) {
+    return l.id == cid;
   });
-  return cb(null, visitors.length);
+
+  if (!customer)
+    return null;
+
+  var ret = _.find(customer.operators, function(user) {
+    return user.id == oid;
+  });
+
+  return ret ? ret.sockets : null;
 };
 
-UserManager.prototype.getOperSocketId = function(operid) {
+/**
+ * @param details cid, oid/vid
+ * @returns sockets of visitor or operator
+ */
+UserManager.prototype.getSendSockets = function(details) {
   var self = this;
-  var ret = _.find(self.operators, function(user) {
-    return user.id == operid;
+  var customer, user;
+
+  //find customer
+  customer = _.find(self.list, function(l) {
+    return l.id == details.cid;
   });
+  logger.info('customer', customer, details, details.from);
+  if (!customer) return null;
 
-  return ret ? ret.socket : null;
+  if (details.to == 'o') {
+    logger.info('operator', details.oid);
+    user = _.find(customer.operators, function(o) {
+      return o.id == details.oid;
+    });
+  } else {
+    logger.info('visitor', details.oid);
+    user = _.find(customer.visitors, function(o) {
+      return o.id == details.vid;
+    });
+  }
+  logger.info('find user', user);
+  return user ? user.sockets : null;
 };
-
 UserManager.prototype.removeUser = function(socket, type) {
   var self = this;
   console.log('operators: ', self.operators);
@@ -85,27 +166,22 @@ UserManager.prototype.removeUser = function(socket, type) {
 };
 
 //visitor & operator
-UserManager.prototype.addPeerChat = function(peer1, peer2, from) {
+UserManager.prototype.addPeerChat = function(oid, vid) {
   var self = this;
-  var opr, vis;
-  if (from == 'operator') {
-    opr = peer1; vis = peer2;
-  } else {
-    opr = peer2; vis = peer1;
-  }
+
   //search operator
   var oper = _.find(self.operators, function(o) {
-    return o.socket == opr;
+    return o.id == oid;
   });
-  if (opr)
-    oper.peers.push(vis);
+  if (oper)
+    oper.peers.push(vid);
 
   //search visitor
   var v = _.find(self.visitors, function(v) {
-    return v.socket == vis;
+    return v.id == vid;
   });
   if (v)
-    v.peers.push(opr);
+    v.peers.push(oid);
 }
 
 /**
