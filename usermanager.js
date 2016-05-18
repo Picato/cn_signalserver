@@ -17,12 +17,12 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
 
   //find customer
   var customer = _.find(self.list, function(c) {
-    return c.id == data.customer;
+    return c.id == data.cid;
   });
 
   if (!customer) {
     customer = {
-      id: data.customer,
+      id: data.cid,
       operators: [],
       visitors: []
     }
@@ -81,17 +81,6 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
   }
   logger.info('user', user, customer);
 
-  //find all operators
-  //var opers = _.filter(self.operators, function(o) {
-  //  return o.customer == data.customer;
-  //});
-  //
-  //var operSockets = [];
-  //_.each(opers, function(o) {
-  //  operSockets.push(o.socket);
-  //});
-
-  //return cb(null, operSockets);
   return cb(null, null);
 };
 
@@ -118,6 +107,28 @@ UserManager.prototype.getOperatorSockets = function(cid, oid) {
   return ret ? ret.sockets : null;
 };
 
+/**
+ * @param cid customer id
+ * @param vid visitor id
+ * @returns sockets of a visitor
+ */
+UserManager.prototype.getVisitorSockets = function(cid, vid) {
+  var self = this;
+
+  //find customer
+  var customer = _.find(self.list, function(l) {
+    return l.id == cid;
+  });
+
+  if (!customer)
+    return null;
+
+  var ret = _.find(customer.visitors, function(user) {
+    return user.id == vid;
+  });
+
+  return ret ? ret.sockets : null;
+};
 /**
  * @param details cid, oid/vid
  * @returns sockets of visitor or operator

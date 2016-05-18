@@ -27,20 +27,84 @@ CallManager.prototype.handleClient = function (client) {
   var self = this;
   client.resources = {screen: false, video: true, audio: false};
 
-  //handle invite message
+  //invite message
   client.on(MSGTYPE.INVITE, function(message) {
     logger.info('invite msg--', message);
 
-    if (message.to == 'o')  {   //vistor --> operator
-      self.invOperator(client, message);
-    } else {   //operator --> visitor
-      self.invVisitor(client, message);
+    //check invite type
+    if (message.type == 'chat') {
+      var roomId, sSockets, rSockets;
+      if (message.from == 'v') {    //v-->o
+        roomId = message.fid;
+        rSockets = self.userManager.getOperatorSockets(message.cid, message.tid);
+        sSockets = self.userManager.getVisitorSockets(message.cid, message.fid);
+      } else if (message.from == 'o' && message.to == 'v') { //o-->v
+        roomId = message.tid;
+        rSockets = self.userManager.getVisitorSockets(message.cid, message.tid);
+        sSockets = self.userManager.getOperatorSockets(message.cid, message.fid);
+      } else {  //o --> o
+
+      }
+
+      if (sSockets && sSockets.length > 0
+          && rSockets && rSockets.length > 0) {
+        var socket;
+
+        //send back accept message
+        client.emit(MSGTYPE.ACCEPT, {
+          id: client.id,
+          conek: message.conek,
+          type: 'chat'
+        });
+
+        _.each(sSockets, function(s) {
+          socket = self.io.sockets.connected[s];
+
+          if (socket)
+            socket.join(roomId);
+        });
+
+        //send invite message
+        var obj = {
+          rid: roomId,
+          fid: message.fid,       //TODO visitor or operator id
+          name: message.name,
+          conek: message.conek,
+          type: 'chat',
+          from: message.from
+        };
+        _.each(rSockets, function(s) {
+          socket = self.io.sockets.connected[s];
+
+          if (socket) {
+            socket.join(roomId);
+            socket.emit(MSGTYPE.INVITE, obj);
+          }
+        });
+      } else {    //TODO handle no receiver sockets
+
+      }
+    }
+    else {      //TODO video call
+      if (message.to == 'o') {  //v --> o
+        var rSockets = self.userManager.getOperatorSockets(message.cid, message.oid);
+        if (rSockets && rSockets.length > 0) {
+          message.fs = client.id;   //to send back ringing message
+          _.each(rSockets, function(s) {
+            socket = self.io.sockets.connected[s];
+
+            if (socket) {
+              socket.emit(MSGTYPE.INVITE, message);
+            }
+          });
+        }
+      }
     }
   });
 
   //ringing message
   client.on(MSGTYPE.RINGING, function (message) {
-    var rec = self.io.sockets.connected[message.to];
+    var rec = self.io.sockets.connected[message.ts];
 
     //forward message
     rec.emit(MSGTYPE.RINGING, message);
@@ -60,17 +124,34 @@ CallManager.prototype.handleClient = function (client) {
       type: message.type
     });
 
-    //inform stun & turn server
-    if (message.type !== MSGTYPE.CHAT) {
-      logger.info('send server info');
-      self.sendServerInfoToClient(client, self.config);
-      self.sendServerInfoToClient(rec, self.config);
+    var roomid = message.tid;
+
+    var recSockets;
+    if (message.to == 'v') {
+      recSockets = self.userManager.getVisitorSockets(message.cid, roomid);
+    } else {
+      recSockets = self.userManager.getOperatorSockets(message.cid, roomid);
+    }
+
+    if (recSockets && recSockets.length > 0) {
+      client.join(roomid);
+      _.each(recSockets, function(s) {
+        var socket = self.io.sockets.connected[s];
+
+        if (socket)
+          socket.join(roomid);
+      });
     }
 
     //add client peer
     if (message.type == MSGTYPE.CHAT) {
-      self.userManager.addPeerChat(message.oid, message.vid);
+      //self.userManager.addPeerChat(message.oid, message.vid);
     } else {    //call
+      //inform stun & turn server
+      logger.info('send server info');
+      self.sendServerInfoToClient(client, self.config);
+      self.sendServerInfoToClient(rec, self.config);
+
       var caller = {      //visitor info
         id: message.caller,
         peertalks: message.to,
@@ -102,26 +183,27 @@ CallManager.prototype.handleClient = function (client) {
   });
 
   // pass a message to another id
-  client.on(MSGTYPE.MESSAGE, function (details) {
-    logger.info('on message', details);
-    if (!details) return;
+  client.on(MSGTYPE.MESSAGE, function (message) {
+    logger.info('on message', message);
+    if (!message || !message.rid) return;
 
-    //find all sockets
-    var sockets = self.userManager.getSendSockets(details);
-    if (!sockets || sockets.length == 0) return;
+    var room = client.broadcast.to(message.rid);
+    if(room) {
+      //emit to all sockets
+      room.emit(MSGTYPE.MESSAGE, message);
+      self.conekLogger.logchat(message);
+    }
+  });
 
-    var peerS;
-    _.each(sockets, function(s) {
-      peerS = self.io.sockets.connected[s];
-      if (!peerS) return;
-
-      details.from = client.id;
-      peerS.emit('message', details);
-    });
-
-    //handle log chat message
-    if (details.type == MSGTYPE.CHAT)
-      self.conekLogger.logchat(details);
+  // sdp for webrtc
+  client.on(MSGTYPE.SDP, function(message) {
+    logger.info('on sdp', message);
+    //forward message
+    var socket = self.io.sockets.connected[message.to];
+    message.from = client.id;
+    if (socket) {
+      socket.emit(message);
+    }
   });
 
   //share screen
@@ -148,7 +230,7 @@ CallManager.prototype.addUser = function (socket, data) {
   //add operator to list
   this.userManager.addUser(data.type, socket, data, function(err, details) {
     if (err) {
-      //TODO handle add user's invalid
+      //TODO handle add user's fail
       return;
     }
 
@@ -161,16 +243,17 @@ CallManager.prototype.addUser = function (socket, data) {
  */
 CallManager.prototype.invOperator = function (client, data) {
   var self = this;
-  var operators = this.userManager.getOperatorSockets(data.cid, data.oid);
+  var operators = this.userManager.getOperatorSockets(data.cid, data.tid);
 
   logger.info('invOperator - get operators', operators);
   if (!operators || operators.length == 0) return;
 
   var obj = {
-    vid: data.vid,       //visitor id
+    fid: data.fid,       //TODO visitor or operator id
     name: data.name,
     conek: data.conek,
-    from: client.id,
+    from: data.from,
+    fs: client.id,
     type: data.type
   };
 
