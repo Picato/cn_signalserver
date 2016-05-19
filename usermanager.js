@@ -30,7 +30,6 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
     user = {
       id: data.id,   //db id
       sockets: [],
-      peers: [],
       call: {/*socket, peer*/},
       join: new Date()
     };
@@ -68,7 +67,6 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
   user = {
     id: data.id,         //socket id
     sockets: [],
-    peers: [],
     call: {/*socket, peer*/},
     join: new Date()
   };
@@ -176,87 +174,6 @@ UserManager.prototype.removeUser = function(socket, type) {
   console.log('visitor: ',self.visitors)
 };
 
-//visitor & operator
-UserManager.prototype.addPeerChat = function(oid, vid) {
-  var self = this;
-
-  //search operator
-  var oper = _.find(self.operators, function(o) {
-    return o.id == oid;
-  });
-  if (oper)
-    oper.peers.push(vid);
-
-  //search visitor
-  var v = _.find(self.visitors, function(v) {
-    return v.id == vid;
-  });
-  if (v)
-    v.peers.push(oid);
-}
-
-/**
- * add Peer if caller & callee are not peers
- * add call session peer
- * @param caller
- * @param callee
- */
-UserManager.prototype.addPeerCall = function(caller, callee) {
-  var self = this;
-  logger.info('all operator', self.operators);
-  logger.info('all visitor', self.visitors);
-  logger.info('caller-callee', caller, callee);
-
-  //support only visitor --> operator
-  //visitor = caller, operator = callee
-  var opr = _.find(self.operators, function(op) {
-    return op.id == callee.id;
-  });
-  if (!opr) return;
-
-  var visitor = _.find(self.visitors, function(v) {
-    return v.id == caller.id;
-  });
-  if (!visitor) return;
-
-  //add peer
-  if (opr.peers.indexOf(visitor.socket) == -1)  //add peer
-    opr.peers.push(visitor.socket);
-  if (visitor.peers.indexOf(opr.socket) == -1)
-    visitor.peers.push(opr.socket);
-
-  //add call peer
-  caller.socket = visitor.socket;
-  opr.call = caller;
-
-  callee.socket = opr.socket;
-  visitor.call = callee;
-
-  logger.info('after add - all operator', self.operators);
-  logger.info('after add - all visitor', self.visitors);
-}
-
-UserManager.prototype.removePeerCall = function(user, type) {
-  var self = this;
-  var peerId = user.call.id, peer;
-
-  if (type == 'operator-call') {
-    peer = _.find(self.visitors, function(v) {
-      return v.id == peerId;
-    });
-  } else {  //type == 'visitor-call'
-    peer = _.find(self.operators, function(o) {
-      return o.id == peerId;
-    });
-  }
-  if (peer)
-    peer.call = {};
-  user.call = {};
-
-  logger.info('operators', self.operators);
-  logger.info('visitor', self.visitors);
-}
-
 UserManager.prototype.getPeers = function(id, cb) {
   var self = this;
   var type;
@@ -290,18 +207,5 @@ UserManager.prototype.getOperatorsByCustomer = function(id, cb) {
 
   return cb(null, operators);
 };
-
-UserManager.prototype.updateId = function(sid, newid) {
-  var self = this;
-
-  //find visitor
-  var visitor = _.find(this.users, function(user) {
-    return user.id == sid;
-  });
-
-  if (visitor) visitor.userid = newid;
-
-  console.log(self.users);
-}
 
 module.exports = UserManager;
