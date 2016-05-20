@@ -33,6 +33,7 @@ CallManager.prototype.handleClient = function (client) {
 
     var sSockets, rSockets;
     if (message.to == 'o' && message.from == 'v') {    //v-->o
+      logger.info('invite msg--rSocket');
       rSockets = self.userManager.getOperatorSockets(message.cid, message.tid);
       sSockets = self.userManager.getVisitorSockets(message.cid, message.fid);
     } else if (message.from == 'o' && message.to == 'v') { //o-->v
@@ -42,6 +43,7 @@ CallManager.prototype.handleClient = function (client) {
 
     }
 
+    logger.info('invite msg--rSocket', rSockets.length);
     if (sSockets && sSockets.length > 0
         && rSockets && rSockets.length > 0) {
       var conek = message.conek;
@@ -62,6 +64,7 @@ CallManager.prototype.handleClient = function (client) {
         socket = self.io.sockets.connected[s];
 
         if (socket) {
+          logger.info('send invite message');
           socket.join(conek);                //TODO check socket already in room
           socket.emit(MSGTYPE.INVITE, message);
         }
@@ -175,6 +178,12 @@ CallManager.prototype.addUser = function (socket, data) {
       return;
     }
 
+    //handle operator joins
+    if (data.type == 'operator') {
+
+    } else { //handle visitor joins
+
+    }
   });
 }
 

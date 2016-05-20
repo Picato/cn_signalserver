@@ -20,12 +20,14 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
     return c.id == data.cid;
   });
 
+  //new customer
   if (!customer) {
     customer = {
       id: data.cid,
       operators: [],
       visitors: []
     }
+
     //create new user
     user = {
       id: data.id,   //db id
@@ -41,6 +43,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
     } else {
       customer.operators.push(user);
     }
+    logger.info('add customer', customer);
     self.list.push(customer);
     return cb(null, null);
   }
@@ -63,7 +66,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
     return cb(null);
   }
 
-  //create new visitor
+  //create new operator/visitor
   user = {
     id: data.id,         //socket id
     sockets: [],
@@ -77,7 +80,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
   } else {
     customer.operators.push(user);
   }
-  logger.info('user', user, customer);
+  logger.info('add user', user, customer);
 
   return cb(null, null);
 };
@@ -94,14 +97,14 @@ UserManager.prototype.getOperatorSockets = function(cid, oid) {
   var customer = _.find(self.list, function(l) {
     return l.id == cid;
   });
-
+  logger.info('1', cid, oid);
   if (!customer)
     return null;
-
+  logger.info('2', customer);
   var ret = _.find(customer.operators, function(user) {
     return user.id == oid;
   });
-
+  logger.info('3');
   return ret ? ret.sockets : null;
 };
 
