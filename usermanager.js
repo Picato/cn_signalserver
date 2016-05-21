@@ -39,6 +39,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
 
     //check type
     if (type == 'visitor') {
+      user.name = data.name;
       customer.visitors.push(user);
     } else {
       customer.operators.push(user);
@@ -48,7 +49,6 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
     return cb(null, null);
   }
 
-  //find visitor in visitor list
   if (type == 'visitor') {
     user = _.find(customer.visitors, function(v) {
       return v.id == data.id;
@@ -62,7 +62,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
   if (user) {
     user.sockets.push(socket);
 
-    //TODO if operator send back all visitor's information
+    //no need to inform, return immediately
     return cb(null);
   }
 
@@ -76,14 +76,19 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
   user.sockets.push(socket);
 
   if (type == 'visitor') {
+    user.name = data.name;
     customer.visitors.push(user);
+
+    //return all operators off customer
+    return cb(null, customer.operators);
   } else {
     customer.operators.push(user);
+
+    return cb(null, customer.visitors);
   }
   logger.info('add user', user, customer);
-
-  return cb(null, null);
 };
+
 
 /**
  * @param cid customer id
@@ -175,31 +180,6 @@ UserManager.prototype.removeUser = function(socket, type) {
   //testing
   console.log('operators: ', self.operators);
   console.log('visitor: ',self.visitors)
-};
-
-UserManager.prototype.getPeers = function(id, cb) {
-  var self = this;
-  var type;
-
-  var user = _.find(self.operators, function(u) {
-    if (u.socket == id) { type = 'operator'; return true; }
-    if (u.call && u.call.talks == id) { type = 'operator-call'; return true; }
-    //TODO should check call socket to faster search
-    return false;
-  });
-  if (user)
-    return cb(null, type, user);
-
-  user = _.find(self.visitors, function(u) {
-    if (u.socket == id) { type = 'visitor'; return true; }
-    if (u.call && u.call.talks == id) { type = 'visitor-call'; return true; }
-    return false;
-  });
-
-  if (user)
-    return cb(null, type, user);
-
-  return cb({error: 'not found'});
 };
 
 UserManager.prototype.getOperatorsByCustomer = function(id, cb) {

@@ -171,6 +171,7 @@ CallManager.prototype.handleClient = function (client) {
  */
 CallManager.prototype.addUser = function (socket, data) {
   var self = this;
+  logger.info('join data', data);
   //add operator to list
   this.userManager.addUser(data.type, socket, data, function(err, details) {
     if (err) {
@@ -178,11 +179,27 @@ CallManager.prototype.addUser = function (socket, data) {
       return;
     }
 
+    if (!details) return;
+
     //handle operator joins
     if (data.type == 'operator') {
-
+      socket.emit('visitorjoin', details);
     } else { //handle visitor joins
-
+      logger.info('info visitor join', details);
+      var sendSocket;
+      _.each(details, function(o) { //each operator
+        _.each(o.sockets, function(s) {
+          sendSocket = self.io.sockets.connected[s];
+          if (sendSocket) {
+            //remove unneccesary information
+            delete data.cid;
+            delete data.token;
+            delete data.key;
+            delete data.type;
+            sendSocket.emit('visitorjoin', data);
+          }
+        })
+      });
     }
   });
 }
@@ -221,89 +238,89 @@ CallManager.prototype.sendServerInfoToClient = function (client, config) {
  * @param id socket id
  */
 CallManager.prototype.clientDisconnect = function(id) {
-  var self = this;
+  //var self = this;
   console.log('handle client disconnected', id);
 
   //remove user as socket id
-  self.userManager.getPeers(id, function(err, type, user) {
-    if (err) return;
-
-    var socket;
-    if (type == 'operator' || type == 'visitor') {
-      //inform peer
-      var peers = user.peers;
-
-      _.each(peers, function(peer){
-        socket = self.io.sockets.connected[peer];
-
-        if (socket)
-          socket.emit(MSGTYPE.LEAVE, {
-            id: user.id
-          });
-      });
-
-      //inform call
-      if (!_.isEmpty(user.call)) {
-        socket = self.io.sockets.connected[user.call.talks];
-        if (socket)
-          socket.emit(MSGTYPE.OWNERLEAVE, {
-            id: id
-          });
-
-        socket = self.io.sockets.connected[user.call.peertalks];
-        if (socket)
-          socket.emit(MSGTYPE.OWNERLEAVE, {
-            id: id
-          });
-      }
-
-      //remote user
-      self.userManager.removeUser(id, type);
-
-      //inform visitor off
-      if (type == 'visitor') {
-        self.userManager.getOperatorsByCustomer(user.customer, function(err, operators){
-          if (err)
-            return;
-
-          _.each(operators, function(operator) {
-            socket = self.io.sockets.connected[operator.socket];
-            if (socket)
-              socket.emit(MSGTYPE.VISITOR_LEAVE);
-          });
-        });
-      }
-    }
-    else {  //type = 'call'
-      //inform owner
-      socket = self.io.sockets.connected[user.socket];
-      if (socket)
-        socket.emit(MSGTYPE.CALLOFF, {
-          id: user.call.id,
-          conek: user.call.conek,
-          time: user.call.time
-        });
-
-      //inform peer
-      socket = self.io.sockets.connected[user.call.socket];
-      if (socket)
-        socket.emit(MSGTYPE.PEERCALLOFF, {
-          id: user.id,
-          conek: user.call.conek,
-          time: user.call.time
-        });
-
-      //inform peer talk
-      socket = self.io.sockets.connected[user.call.peertalks];
-      if (socket)
-        socket.emit(MSGTYPE.PEERCALLOFF, {
-          conek: user.call.conek,
-          time: user.call.time
-        });
-
-      self.userManager.removePeerCall(user, type);
-    }
-  });
+  //self.userManager.getPeers(id, function(err, type, user) {
+  //  if (err) return;
+  //
+  //  var socket;
+  //  if (type == 'operator' || type == 'visitor') {
+  //    //inform peer
+  //    var peers = user.peers;
+  //
+  //    _.each(peers, function(peer){
+  //      socket = self.io.sockets.connected[peer];
+  //
+  //      if (socket)
+  //        socket.emit(MSGTYPE.LEAVE, {
+  //          id: user.id
+  //        });
+  //    });
+  //
+  //    //inform call
+  //    if (!_.isEmpty(user.call)) {
+  //      socket = self.io.sockets.connected[user.call.talks];
+  //      if (socket)
+  //        socket.emit(MSGTYPE.OWNERLEAVE, {
+  //          id: id
+  //        });
+  //
+  //      socket = self.io.sockets.connected[user.call.peertalks];
+  //      if (socket)
+  //        socket.emit(MSGTYPE.OWNERLEAVE, {
+  //          id: id
+  //        });
+  //    }
+  //
+  //    //remote user
+  //    self.userManager.removeUser(id, type);
+  //
+  //    //inform visitor off
+  //    if (type == 'visitor') {
+  //      self.userManager.getOperatorsByCustomer(user.customer, function(err, operators){
+  //        if (err)
+  //          return;
+  //
+  //        _.each(operators, function(operator) {
+  //          socket = self.io.sockets.connected[operator.socket];
+  //          if (socket)
+  //            socket.emit(MSGTYPE.VISITOR_LEAVE);
+  //        });
+  //      });
+  //    }
+  //  }
+  //  else {  //type = 'call'
+  //    //inform owner
+  //    socket = self.io.sockets.connected[user.socket];
+  //    if (socket)
+  //      socket.emit(MSGTYPE.CALLOFF, {
+  //        id: user.call.id,
+  //        conek: user.call.conek,
+  //        time: user.call.time
+  //      });
+  //
+  //    //inform peer
+  //    socket = self.io.sockets.connected[user.call.socket];
+  //    if (socket)
+  //      socket.emit(MSGTYPE.PEERCALLOFF, {
+  //        id: user.id,
+  //        conek: user.call.conek,
+  //        time: user.call.time
+  //      });
+  //
+  //    //inform peer talk
+  //    socket = self.io.sockets.connected[user.call.peertalks];
+  //    if (socket)
+  //      socket.emit(MSGTYPE.PEERCALLOFF, {
+  //        conek: user.call.conek,
+  //        time: user.call.time
+  //      });
+  //
+  //    self.userManager.removePeerCall(user, type);
+  //  }
+  //});
 }
 
 module.exports = CallManager;
