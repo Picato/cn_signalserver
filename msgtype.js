@@ -22,6 +22,7 @@ module.exports = {
   CHAT: 'chat',
   VIDEO: 'video',
   CALL: 'call',
+  SDP: 'sdp',     //webrtc session description protocol
 
   //
   UPDATEUSERID: 'updateid',

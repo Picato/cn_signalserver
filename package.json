@@ -4,7 +4,6 @@
   "version": "0.2.3",
   "dependencies": {
     "getconfig": "2.1.0",
-    "hashtable": "^2.0.1",
     "lodash": "^4.6.1",
     "node-uuid": "1.2.0",
     "request": "^2.69.0",
