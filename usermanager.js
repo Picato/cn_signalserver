@@ -40,30 +40,47 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
     //check type
     if (type == 'visitor') {
       user.name = data.name;
+      user.conek = null;    //visitor has only one conek
       customer.visitors.push(user);
     } else {
+      user.coneks = [];    //operator has multiple coneks
       customer.operators.push(user);
     }
     logger.info('add customer', customer);
+
     self.list.push(customer);
     return cb(null, null);
   }
 
+  var coneks = [];
   if (type == 'visitor') {
     user = _.find(customer.visitors, function(v) {
       return v.id == data.id;
     });
+    console.log('search id', data.id);
+    console.log('search id', customer);
+    if (user) {
+      console.log('user', user);
+      user.sockets.push(socket);
+      if (user.conek)
+        coneks.push(user.conek);
+      else
+        coneks = null;
+
+      return cb(null, coneks);
+    }
   } else {
     user = _.find(customer.operators, function(o) {
       return o.id == data.id;
     });
-  }
-
-  if (user) {
-    user.sockets.push(socket);
-
-    //no need to inform, return immediately
-    return cb(null);
+    if (user) {
+      user.sockets.push(socket);
+      if (user.coneks.length > 0)
+        coneks.concat(user.coneks);   //multiple conek
+      else
+        coneks = null;
+      return cb(null, coneks);
+    }
   }
 
   //create new operator/visitor
@@ -76,15 +93,18 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
   user.sockets.push(socket);
 
   if (type == 'visitor') {
+
     user.name = data.name;
+    user.conek = null;
     customer.visitors.push(user);
 
     //return all operators off customer
-    return cb(null, customer.operators);
+    return cb(null, null, customer.operators);
   } else {
+    user.coneks = [];
     customer.operators.push(user);
 
-    return cb(null, customer.visitors);
+    return cb(null, null, customer.visitors);
   }
   logger.info('add user', user, customer);
 };
@@ -102,14 +122,11 @@ UserManager.prototype.getOperatorSockets = function(cid, oid) {
   var customer = _.find(self.list, function(l) {
     return l.id == cid;
   });
-  logger.info('1', cid, oid);
   if (!customer)
     return null;
-  logger.info('2', customer);
   var ret = _.find(customer.operators, function(user) {
     return user.id == oid;
   });
-  logger.info('3');
   return ret ? ret.sockets : null;
 };
 
@@ -135,6 +152,96 @@ UserManager.prototype.getVisitorSockets = function(cid, vid) {
 
   return ret ? ret.sockets : null;
 };
+
+/**
+ * set conek for visitor & operator
+ * @param cid
+ * @param oid
+ * @param vid
+ * @param conek
+ */
+UserManager.prototype.setConek = function(cid, oid, vid, conek) {
+  var self = this;
+
+  //find customer
+  var customer = _.find(self.list, function(l) {
+    return l.id == cid;
+  });
+  if (!customer) return;
+
+  //find operator
+  var operator = _.find(customer.operators, function(o) {
+    return o.id == oid;
+  });
+  if (operator) {
+    if (operator.coneks.indexOf(conek) == -1) {
+      operator.coneks.push(conek);
+    }
+  }
+
+  //find visitor
+  var visitor = _.find(customer.visitors, function(v) {
+    return v.id == vid;
+  });
+  if (visitor)
+    visitor.conek = conek;
+  console.log('set Conek', customer);
+}
+/**
+ * handle client disconnect
+ * @param id
+ * @param cb inform visitor/operator offline
+ */
+UserManager.prototype.clientDisconnect = function(id, cb) {
+  var self = this, cus, operator, visitor, sIndex, oIndex;
+  _.some(self.list, function(customer) {
+    cus = customer;
+    var operators = customer.operators;
+    _.some(operators, function(o, index) {
+      oIndex = index;
+      sIndex = o.sockets.indexOf(id);
+      if ( sIndex >= 0) {
+        operator = o;
+        return true;
+      }
+    });
+    if (operator) {
+      operator.sockets.splice(sIndex, 1);
+      if (operator.sockets.length == 0) {
+        //cus.operators.splice(oIndex, 1);
+      }
+      return true;
+    }
+    var visitors = customer.visitors;
+    _.some(visitors, function(v, index) {
+      oIndex = index;
+      sIndex = v.sockets.indexOf(id);
+      if (sIndex >= 0) {
+        visitor = v;
+        return true;
+      }
+    });
+    if (visitor) {
+      visitor.sockets.splice(sIndex, 1);
+      if (visitor.sockets.length == 0) {
+        //cus.visitors.splice(oIndex, 1);
+      }
+      return true;
+    }
+  });
+
+  var type = null, ret;
+  if (operator) { type = 'operator'; ret = operator; }
+  if (visitor) { type = 'visitor'; ret = visitor; }
+  if (!type)
+    return cb({error: 'not found'});
+  else
+    return cb(null, {
+      type: type,
+      cid: cus.id,
+      obj: ret
+    });
+}
 /**
  * @param details cid, oid/vid
  * @returns sockets of visitor or operator

@@ -31,23 +31,26 @@ CallManager.prototype.handleClient = function (client) {
   client.on(MSGTYPE.INVITE, function(message) {
     logger.info('invite msg--', message);
 
-    var sSockets, rSockets;
+    var sSockets, rSockets, vid, oid;
+    var cid = message.cid;
     if (message.to == 'o' && message.from == 'v') {    //v-->o
       logger.info('invite msg--rSocket');
-      rSockets = self.userManager.getOperatorSockets(message.cid, message.tid);
-      sSockets = self.userManager.getVisitorSockets(message.cid, message.fid);
+      vid = message.fid; oid = message.tid;
+      rSockets = self.userManager.getOperatorSockets(cid, oid);
+      sSockets = self.userManager.getVisitorSockets(cid, vid);
     } else if (message.from == 'o' && message.to == 'v') { //o-->v
-      rSockets = self.userManager.getVisitorSockets(message.cid, message.tid);
-      sSockets = self.userManager.getOperatorSockets(message.cid, message.fid);
+      vid = message.tid; oid = message.fid;
+
+      rSockets = self.userManager.getVisitorSockets(cid, vid);
+      sSockets = self.userManager.getOperatorSockets(cid, oid);
     } else {  //o --> o
 
     }
 
-    logger.info('invite msg--rSocket', rSockets.length);
-    if (sSockets && sSockets.length > 0
-        && rSockets && rSockets.length > 0) {
+    if (sSockets && sSockets.length > 0 && rSockets && rSockets.length > 0) {
       var conek = message.conek;
       if (message.type == 'chat') {
+        logger.info('send back accept msg');
         //send back accept message
         client.emit(MSGTYPE.ACCEPT, {
           id: client.id,
@@ -82,7 +85,12 @@ CallManager.prototype.handleClient = function (client) {
       } else {
         logger.info('already room');
       }
-    } else {    //TODO handle no receiver sockets
+
+      //set conek
+      if (message.type == 'chat') {
+        self.userManager.setConek(cid, oid, vid, conek);
+      }
+    } else {//TODO handle no receiver sockets
 
     }
   });
@@ -132,14 +140,27 @@ CallManager.prototype.handleClient = function (client) {
     if (!message || message.type != 'chat') return;
 
     var room = client.broadcast.to(message.conek);
+    logger.info('broadcast to room - 0');
     if (room) {
+      logger.info('broadcast to room');
       //emit to all sockets
       room.emit(MSGTYPE.MESSAGE, message);
       self.conekLogger.logchat(message);
     }
   });
 
-  // pass sdp message
+  client.on(MSGTYPE.DISCONNECT, function() {
+    logger.info('disconnect');
+    self.userManager.clientDisconnect(client.id, function(err, obj) {
+      if (err)
+        return;
+      //TODO handle operator/visitor offline
+
+      logger.info('disconnect', obj.type);
+    });
+  });
+
+  //pass sdp message
   client.on(MSGTYPE.SDP, function(message) {
     //forward message to receive
     var socket = self.io.sockets.connected[message.to];
@@ -173,29 +194,43 @@ CallManager.prototype.addUser = function (socket, data) {
   var self = this;
   logger.info('join data', data);
   //add operator to list
-  this.userManager.addUser(data.type, socket, data, function(err, details) {
+  this.userManager.addUser(data.type, socket.id, data, function(err, coneks, details) {
     if (err) {
       //TODO handle add user's fail
       return;
     }
 
-    if (!details) return;
+    //join room for new connections
+    logger.info('find coneks', coneks);
+    if (coneks) {
+      console.log('inform coneks', coneks);
+      _.each(coneks, function(conek) {
+        socket.join(conek);
+        socket.emit('conek', conek);
+      });
+      return;
+    }
 
-    //handle operator joins
+    logger.info('find emit', details);
+    if (!details) return;
+    //handle new operator joins
     if (data.type == 'operator') {
-      socket.emit('visitorjoin', details);
-    } else { //handle visitor joins
+      //emit all ol visitors to operator
+      socket.emit('visitor', details);
+    } else { //handle new visitor joins
       logger.info('info visitor join', details);
+
+      //remove unnecessary information
+      delete data.cid;
+      delete data.token;
+      delete data.key;
+      delete data.type;
+
       var sendSocket;
       _.each(details, function(o) { //each operator
         _.each(o.sockets, function(s) {
           sendSocket = self.io.sockets.connected[s];
           if (sendSocket) {
-            //remove unneccesary information
-            delete data.cid;
-            delete data.token;
-            delete data.key;
-            delete data.type;
             sendSocket.emit('visitorjoin', data);
           }
         })
@@ -230,97 +265,6 @@ CallManager.prototype.sendServerInfoToClient = function (client, config) {
 
   // tell client about turn servers
   client.emit(MSGTYPE.TURNSERVER, credentials);
-}
-
-/**
- * @type {CallManager}
- * handle client disconnect
- * @param id socket id
- */
-CallManager.prototype.clientDisconnect = function(id) {
-  //var self = this;
-  console.log('handle client disconnected', id);
-
-  //remove user as socket id
-  //self.userManager.getPeers(id, function(err, type, user) {
-  //  if (err) return;
-  //
-  //  var socket;
-  //  if (type == 'operator' || type == 'visitor') {
-  //    //inform peer
-  //    var peers = user.peers;
-  //
-  //    _.each(peers, function(peer){
-  //      socket = self.io.sockets.connected[peer];
-  //
-  //      if (socket)
-  //        socket.emit(MSGTYPE.LEAVE, {
-  //          id: user.id
-  //        });
-  //    });
-  //
-  //    //inform call
-  //    if (!_.isEmpty(user.call)) {
-  //      socket = self.io.sockets.connected[user.call.talks];
-  //      if (socket)
-  //        socket.emit(MSGTYPE.OWNERLEAVE, {
-  //          id: id
-  //        });
-  //
-  //      socket = self.io.sockets.connected[user.call.peertalks];
-  //      if (socket)
-  //        socket.emit(MSGTYPE.OWNERLEAVE, {
-  //          id: id
-  //        });
-  //    }
-  //
-  //    //remote user
-  //    self.userManager.removeUser(id, type);
-  //
-  //    //inform visitor off
-  //    if (type == 'visitor') {
-  //      self.userManager.getOperatorsByCustomer(user.customer, function(err, operators){
-  //        if (err)
-  //          return;
-  //
-  //        _.each(operators, function(operator) {
-  //          socket = self.io.sockets.connected[operator.socket];
-  //          if (socket)
-  //            socket.emit(MSGTYPE.VISITOR_LEAVE);
-  //        });
-  //      });
-  //    }
-  //  }
-  //  else {  //type = 'call'
-  //    //inform owner
-  //    socket = self.io.sockets.connected[user.socket];
-  //    if (socket)
-  //      socket.emit(MSGTYPE.CALLOFF, {
-  //        id: user.call.id,
-  //        conek: user.call.conek,
-  //        time: user.call.time
-  //      });
-  //
-  //    //inform peer
-  //    socket = self.io.sockets.connected[user.call.socket];
-  //    if (socket)
-  //      socket.emit(MSGTYPE.PEERCALLOFF, {
-  //        id: user.id,
-  //        conek: user.call.conek,
-  //        time: user.call.time
-  //      });
-  //
-  //    //inform peer talk
-  //    socket = self.io.sockets.connected[user.call.peertalks];
-  //    if (socket)
-  //      socket.emit(MSGTYPE.PEERCALLOFF, {
-  //        conek: user.call.conek,
-  //        time: user.call.time
-  //      });
-  //
-  //    self.userManager.removePeerCall(user, type);
-  //  }
-  //});
 }
 
 module.exports = CallManager;
