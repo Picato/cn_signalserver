@@ -49,15 +49,7 @@ CallManager.prototype.handleClient = function (client) {
 
     if (sSockets && sSockets.length > 0 && rSockets && rSockets.length > 0) {
       var conek = message.conek;
-      if (message.type == 'chat') {
-        logger.info('send back accept msg');
-        //send back accept message
-        client.emit(MSGTYPE.ACCEPT, {
-          id: client.id,
-          conek: conek,
-          type: 'chat'
-        });
-      } else {   //call
+      if (message.type == 'call') {
         message.fs = client.id;   //to send back ringing message
       }
 
@@ -86,8 +78,15 @@ CallManager.prototype.handleClient = function (client) {
         logger.info('already room');
       }
 
-      //set conek
       if (message.type == 'chat') {
+        //send back accept msg
+        client.emit(MSGTYPE.ACCEPT, {
+          id: message.tid,
+          conek: conek,
+          type: 'chat'
+        });
+
+        //set conek
         self.userManager.setConek(cid, oid, vid, conek);
       }
     } else {//TODO handle no receiver sockets
