@@ -210,12 +210,20 @@ CallManager.prototype.addUser = function (socket, data) {
       return;
     }
 
-    logger.info('find emit', details);
     if (!details) return;
+
+    logger.info('find emit', details);
+
     //handle new operator joins
     if (data.type == 'operator') {
-      //emit all ol visitors to operator
-      socket.emit('visitor', details);
+      //emit all oll visitors to operator
+      var message = null, ret = [];
+      _.each(details, function(detail) {
+        message = detail;
+        delete message.sockets;
+        ret.push(message);
+      });
+      socket.emit(MSGTYPE.VISITORS, ret);
     } else { //handle new visitor joins
       logger.info('info visitor join', details);
 
@@ -230,7 +238,7 @@ CallManager.prototype.addUser = function (socket, data) {
         _.each(o.sockets, function(s) {
           sendSocket = self.io.sockets.connected[s];
           if (sendSocket) {
-            sendSocket.emit('visitorjoin', data);
+            sendSocket.emit(MSGTYPE.VISITOR_JOIN, data);
           }
         })
       });
