@@ -19,18 +19,14 @@ module.exports = function (server, config) {
 
   io.sockets.on('connection', function (client) {
     cm.handleClient(client);
-
-    client.on('disconnect', function() {
-      cm.clientDisconnect(client.id);
-    });
   });
 
   //authenticate function
   function authenticate(socket, data, callback) {
-    logger.debug('request authenticate', socket.id);
+    logger.debug('request authenticate', socket.id, data);
     var token = data.token;
     var key = data.key;
-    var hash = crypto.createHmac('sha1', config.secret).update(key);
+    //var hash = crypto.createHmac('sha1', config.secret).update(key);
 
     logger.info('received data ', token, ' key ', key);
     //if (hash === token) {
@@ -48,6 +44,6 @@ module.exports = function (server, config) {
     logger.info('post authenticate data', data);
     data.type == 'visitor' ? logger.info('visitor join') : logger.info('operator join');
     if (data.type == 'visitor' || data.type == 'operator')
-      cm.addUser(socket.id, data);
+      cm.addUser(socket, data);
   }
 };
