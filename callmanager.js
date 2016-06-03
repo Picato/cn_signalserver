@@ -153,9 +153,9 @@ CallManager.prototype.handleClient = function (client) {
     self.userManager.clientDisconnect(client.id, function(err, obj) {
       if (err)
         return;
-      //TODO handle operator/visitor offline
 
-      logger.info('disconnect', obj.type);
+      //TODO handle operator/visitor offline
+      logger.info('handle disconnect', obj);
     });
   });
 

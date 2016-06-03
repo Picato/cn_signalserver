@@ -12,6 +12,15 @@ function UserManager() {
   this.list = [];
 }
 
+/**
+ * add customer/operator/visitor to list,
+ * return operator, visitor
+ * @param type
+ * @param socket
+ * @param data
+ * @param cb
+ * @returns {*}
+ */
 UserManager.prototype.addUser = function(type, socket, data, cb) {
   var self = this, user;
 
@@ -22,11 +31,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
 
   //new customer
   if (!customer) {
-    customer = {
-      id: data.cid,
-      operators: [],
-      visitors: []
-    }
+    customer = { id: data.cid, operators: [], visitors: [] };
 
     //create new user
     user = {
@@ -40,7 +45,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
     //check type
     if (type == 'visitor') {
       user.name = data.name;
-      user.conek = null;    //visitor has only one conek
+      user.conek = null;    //visitor has only one coneks
       customer.visitors.push(user);
     } else {
       user.coneks = [];    //operator has multiple coneks
@@ -53,14 +58,13 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
   }
 
   var coneks = [];
+
   if (type == 'visitor') {
     user = _.find(customer.visitors, function(v) {
       return v.id == data.id;
     });
-    console.log('search id', data.id);
-    console.log('search id', customer);
+
     if (user) {
-      console.log('user', user);
       user.sockets.push(socket);
       if (user.conek)
         coneks.push(user.conek);
@@ -73,12 +77,14 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
     user = _.find(customer.operators, function(o) {
       return o.id == data.id;
     });
+
     if (user) {
       user.sockets.push(socket);
       if (user.coneks.length > 0)
-        coneks.concat(user.coneks);   //multiple conek
+        coneks.concat(user.coneks);   //multiple coneks
       else
         coneks = null;
+
       return cb(null, coneks);
     }
   }
@@ -93,7 +99,6 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
   user.sockets.push(socket);
 
   if (type == 'visitor') {
-
     user.name = data.name;
     user.conek = null;
     customer.visitors.push(user);
@@ -108,7 +113,6 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
   }
   logger.info('add user', user, customer);
 };
-
 
 /**
  * @param cid customer id
@@ -209,6 +213,17 @@ UserManager.prototype.clientDisconnect = function(id, cb) {
       operator.sockets.splice(sIndex, 1);
       if (operator.sockets.length == 0) {
         //cus.operators.splice(oIndex, 1);
+        var uid = operator.id;
+
+        setTimeout(function() {
+          checkOffline('operator', cus, uid, function(found) {
+            if (found) {
+              return cb(null, found);
+            }
+          });
+        } , 3000); //3 seconds
+
+        operator.coneks = [];
       }
       return true;
     }
@@ -225,77 +240,73 @@ UserManager.prototype.clientDisconnect = function(id, cb) {
       visitor.sockets.splice(sIndex, 1);
       if (visitor.sockets.length == 0) {
         //cus.visitors.splice(oIndex, 1);
+        var uid = visitor.id;
+
+        setTimeout(function() {
+          checkOffline('visitor', cus, uid, function(found) {
+            if (found) {
+              return cb(null, found);
+            }
+          });
+
+        }, 3000); //3 seconds
+
+        visitor.conek = null;
       }
       return true;
     }
   });
 
   var type = null, ret;
-  if (operator) { type = 'operator'; ret = operator; }
-  if (visitor) { type = 'visitor'; ret = visitor; }
+  if (operator) { type = 'operator'; }
+  if (visitor) { type = 'visitor'; }
   if (!type)
     return cb({error: 'not found'});
-  else
-    return cb(null, {
-      type: type,
-      cid: cus.id,
-      obj: ret
-    });
 }
+
 /**
- * @param details cid, oid/vid
- * @returns sockets of visitor or operator
+ * check an user offline
+ * @param type
+ * @param customer
+ * @param uid
  */
-UserManager.prototype.getSendSockets = function(details) {
-  var self = this;
-  var customer, user;
+function checkOffline(type, customer, uid, cb) {
+  //find user
+  var user = null, index = null;
+  var isOl = false;
 
-  //find customer
-  customer = _.find(self.list, function(l) {
-    return l.id == details.cid;
-  });
-  logger.info('customer', customer, details, details.from);
-  if (!customer) return null;
-
-  if (details.to == 'o') {
-    logger.info('operator', details.oid);
-    user = _.find(customer.operators, function(o) {
-      return o.id == details.oid;
+  if (type == 'operator') {
+    user = _.find(customer.operators, function (o, i) {
+      index = i;
+      return o.id == uid;
     });
-  } else {
-    logger.info('visitor', details.oid);
-    user = _.find(customer.visitors, function(o) {
-      return o.id == details.vid;
+    if (user && user.sockets.length == 0) {
+      customer.operators.splice(index, 1);
+      isOl = true;
+    }
+  } else {  //visitor
+    user = _.find(customer.visitors, function (v, i) {
+      index = i;
+      return v.id == uid;
+    });
+    if (user && user.sockets.length == 0) {
+      customer.visitors.splice(index, 1);
+      isOl = true;
+    }
+  }
+
+  //TODO check customer & remove
+  //cid = customer.id
+
+  if (isOl) {
+    return cb({
+      type: type,
+      cid: customer.id,
+      uid: uid
     });
   }
-  logger.info('find user', user);
-  return user ? user.sockets : null;
-};
-UserManager.prototype.removeUser = function(socket, type) {
-  var self = this;
-  console.log('operators: ', self.operators);
-  console.log('visitor: ',self.visitors)
-  if (type == 'visitor')
-    _.remove(self.visitors, function(user) {
-      return user.socket == socket;
-    });
-  else
-    _.remove(self.operators, function(user) {
-      return user.socket == socket;
-    });
 
-  //testing
-  console.log('operators: ', self.operators);
-  console.log('visitor: ',self.visitors)
-};
-
-UserManager.prototype.getOperatorsByCustomer = function(id, cb) {
-  var self = this;
-  var operators = _.filter(self.operators, function(operator) {
-    return operator.customer == id;
-  });
-
-  return cb(null, operators);
-};
+  return cb(null);
+}
 
 module.exports = UserManager;
