@@ -123,6 +123,14 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
   logger.info('add user', user, customer);
 };
 
+UserManager.prototype.findOperators = function(cid, cb) {
+  var self = this;
+  var customer = _.find(self.list, function(c) {
+    return c.id = cid;
+  });
+  var ret = customer ? customer.operators : null;
+  return cb(null, ret);
+};
 /**
  * @param cid customer id
  * @param oid operator id

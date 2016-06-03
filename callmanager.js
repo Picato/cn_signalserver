@@ -154,8 +154,27 @@ CallManager.prototype.handleClient = function (client) {
       if (err)
         return;
 
-      //TODO handle operator/visitor offline
       logger.info('handle disconnect', obj);
+
+      //visitor off
+      if (obj.type == 'visitor') {
+        self.userManager.findOperators(obj.cid, function (err, operators) {
+          if (err || !operators)
+            return;
+
+          var socket = null;
+          _.each(operators, function (operator) {
+            _.each(operator.sockets, function (s) {
+              socket = self.io.sockets.connected[s];
+
+              if (socket)
+                socket.emit(MSGTYPE.VISITOR_LEAVE, {id: obj.uid})
+            });
+          });
+        });
+      } else {
+        //TODO handle operator offline
+      }
     });
   });
 
