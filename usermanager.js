@@ -71,7 +71,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
       else
         coneks = null;
 
-      return cb(null, coneks);
+      return cb(null, { coneks: coneks });
     }
   } else {
     user = _.find(customer.operators, function(o) {
@@ -85,7 +85,10 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
       else
         coneks = null;
 
-      return cb(null, coneks);
+      return cb(null, {
+        visitors: customer.visitors,
+        coneks: coneks
+      });
     }
   }
 
@@ -104,12 +107,18 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
     customer.visitors.push(user);
 
     //return all operators off customer
-    return cb(null, null, customer.operators);
+    return cb(null, {
+      type: 'new',
+      operators: customer.operators
+    });
   } else {
     user.coneks = [];
     customer.operators.push(user);
 
-    return cb(null, null, customer.visitors);
+    return cb(null, {
+      type: 'new',
+      visitors: customer.visitors
+    });
   }
   logger.info('add user', user, customer);
 };
@@ -228,8 +237,10 @@ UserManager.prototype.clientDisconnect = function(id, cb) {
       return true;
     }
     var visitors = customer.visitors;
+    console.log('visitors  for closing', visitors);
     _.some(visitors, function(v, index) {
       oIndex = index;
+
       sIndex = v.sockets.indexOf(id);
       if (sIndex >= 0) {
         visitor = v;

@@ -193,20 +193,9 @@ CallManager.prototype.addUser = function (socket, data) {
   var self = this;
   logger.info('join data', data);
   //add operator to list
-  this.userManager.addUser(data.type, socket.id, data, function(err, coneks, details) {
+  this.userManager.addUser(data.type, socket.id, data, function(err, details) {
     if (err) {
       //TODO handle add user's fail
-      return;
-    }
-
-    //join room for new connections
-    logger.info('find coneks', coneks);
-    if (coneks) {
-      console.log('inform coneks', coneks);
-      _.each(coneks, function(conek) {
-        socket.join(conek);
-        socket.emit('conek', conek);
-      });
       return;
     }
 
@@ -214,35 +203,50 @@ CallManager.prototype.addUser = function (socket, data) {
 
     logger.info('find emit', details);
 
-    //handle new operator joins
     if (data.type == 'operator') {
       //emit all oll visitors to operator
-      var message = null, ret = [];
-      _.each(details, function(detail) {
-        message = detail;
-        delete message.sockets;
-        ret.push(message);
+      var ret = [];
+
+      _.each(details.visitors, function (detail) {
+
+        ret.push({
+          id: detail.id,
+          name: detail.name,
+          join: detail.join,
+          conek: detail.conek
+        });
       });
+
       socket.emit(MSGTYPE.VISITORS, ret);
     } else { //handle new visitor joins
       logger.info('info visitor join', details);
 
-      //remove unnecessary information
-      delete data.cid;
-      delete data.token;
-      delete data.key;
-      delete data.type;
+      if (details.type == 'new') {
+        //remove unnecessary information
+        delete data.cid;
+        delete data.token;
+        delete data.key;
+        delete data.type;
 
-      var sendSocket;
-      _.each(details, function(o) { //each operator
-        _.each(o.sockets, function(s) {
-          sendSocket = self.io.sockets.connected[s];
-          if (sendSocket) {
-            sendSocket.emit(MSGTYPE.VISITOR_JOIN, data);
-          }
-        })
-      });
+        var sendSocket;
+        _.each(details.operators, function (o) { //each operator
+          _.each(o.sockets, function (s) {
+            sendSocket = self.io.sockets.connected[s];
+            if (sendSocket) {
+              sendSocket.emit(MSGTYPE.VISITOR_JOIN, data);
+            }
+          });
+        });
+      }
     }
+
+    //if have coneks
+    _.each(details.coneks, function(conek) {
+      socket.join(conek);
+
+      if (data.type == 'visitor')
+        socket.emit('conek', conek);
+    });
   });
 }
 
