@@ -153,9 +153,28 @@ CallManager.prototype.handleClient = function (client) {
     self.userManager.clientDisconnect(client.id, function(err, obj) {
       if (err)
         return;
-      //TODO handle operator/visitor offline
 
-      logger.info('disconnect', obj.type);
+      logger.info('handle disconnect', obj);
+
+      //visitor off
+      if (obj.type == 'visitor') {
+        self.userManager.findOperators(obj.cid, function (err, operators) {
+          if (err || !operators)
+            return;
+
+          var socket = null;
+          _.each(operators, function (operator) {
+            _.each(operator.sockets, function (s) {
+              socket = self.io.sockets.connected[s];
+
+              if (socket)
+                socket.emit(MSGTYPE.VISITOR_LEAVE, {id: obj.uid})
+            });
+          });
+        });
+      } else {
+        //TODO handle operator offline
+      }
     });
   });
 
@@ -193,48 +212,60 @@ CallManager.prototype.addUser = function (socket, data) {
   var self = this;
   logger.info('join data', data);
   //add operator to list
-  this.userManager.addUser(data.type, socket.id, data, function(err, coneks, details) {
+  this.userManager.addUser(data.type, socket.id, data, function(err, details) {
     if (err) {
       //TODO handle add user's fail
       return;
     }
 
-    //join room for new connections
-    logger.info('find coneks', coneks);
-    if (coneks) {
-      console.log('inform coneks', coneks);
-      _.each(coneks, function(conek) {
-        socket.join(conek);
-        socket.emit('conek', conek);
-      });
-      return;
-    }
+    if (!details) return;
 
     logger.info('find emit', details);
-    if (!details) return;
-    //handle new operator joins
+
     if (data.type == 'operator') {
-      //emit all ol visitors to operator
-      socket.emit('visitor', details);
+      //emit all oll visitors to operator
+      var ret = [];
+
+      _.each(details.visitors, function (detail) {
+
+        ret.push({
+          id: detail.id,
+          name: detail.name,
+          join: detail.join,
+          conek: detail.conek
+        });
+      });
+
+      socket.emit(MSGTYPE.VISITORS, ret);
     } else { //handle new visitor joins
       logger.info('info visitor join', details);
 
-      //remove unnecessary information
-      delete data.cid;
-      delete data.token;
-      delete data.key;
-      delete data.type;
+      if (details.type == 'new') {
+        //remove unnecessary information
+        delete data.cid;
+        delete data.token;
+        delete data.key;
+        delete data.type;
 
-      var sendSocket;
-      _.each(details, function(o) { //each operator
-        _.each(o.sockets, function(s) {
-          sendSocket = self.io.sockets.connected[s];
-          if (sendSocket) {
-            sendSocket.emit('visitorjoin', data);
-          }
-        })
-      });
+        var sendSocket;
+        _.each(details.operators, function (o) { //each operator
+          _.each(o.sockets, function (s) {
+            sendSocket = self.io.sockets.connected[s];
+            if (sendSocket) {
+              sendSocket.emit(MSGTYPE.VISITOR_JOIN, data);
+            }
+          });
+        });
+      }
     }
+
+    //if have coneks
+    _.each(details.coneks, function(conek) {
+      socket.join(conek);
+
+      if (data.type == 'visitor')
+        socket.emit('conek', conek);
+    });
   });
 }
 

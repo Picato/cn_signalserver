@@ -34,6 +34,7 @@ module.exports = {
   NUMBER_VISITOR: 'numbervisitor',
   VISITOR_JOIN: 'visitorjoin',
   VISITOR_LEAVE: 'visitorleave',
+  VISITORS: 'visitors',
 
   //info
   OPERATOR_SOCKET_ID: 'operatorid',
