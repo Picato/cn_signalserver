@@ -65,6 +65,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
     });
 
     if (user) {
+      console.log('find conek', user);
       user.sockets.push(socket);
       if (user.conek)
         coneks.push(user.conek);
@@ -239,8 +240,6 @@ UserManager.prototype.clientDisconnect = function(id, cb) {
             }
           });
         } , 3000); //3 seconds
-
-        operator.coneks = [];
       }
       return true;
     }
@@ -269,8 +268,6 @@ UserManager.prototype.clientDisconnect = function(id, cb) {
           });
 
         }, 3000); //3 seconds
-
-        visitor.conek = null;
       }
       return true;
     }

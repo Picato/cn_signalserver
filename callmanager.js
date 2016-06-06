@@ -34,11 +34,12 @@ CallManager.prototype.handleClient = function (client) {
     var sSockets, rSockets, vid, oid;
     var cid = message.cid;
     if (message.to == 'o' && message.from == 'v') {    //v-->o
-      logger.info('invite msg--rSocket');
+      logger.info('invite msg-- v -> o');
       vid = message.fid; oid = message.tid;
       rSockets = self.userManager.getOperatorSockets(cid, oid);
       sSockets = self.userManager.getVisitorSockets(cid, vid);
     } else if (message.from == 'o' && message.to == 'v') { //o-->v
+      logger.info('invite msg-- o -> v');
       vid = message.tid; oid = message.fid;
 
       rSockets = self.userManager.getVisitorSockets(cid, vid);
@@ -49,8 +50,9 @@ CallManager.prototype.handleClient = function (client) {
 
     if (sSockets && sSockets.length > 0 && rSockets && rSockets.length > 0) {
       var conek = message.conek;
+
       if (message.type == 'call') {
-        message.fs = client.id;   //to send back ringing message
+        message.fs = client.id;
       }
 
       //invite message
@@ -96,6 +98,7 @@ CallManager.prototype.handleClient = function (client) {
 
   //ringing message
   client.on(MSGTYPE.RINGING, function (message) {
+    console.log('ringing msg', message);
     var rec = self.io.sockets.connected[message.ts];
 
     //forward message
@@ -119,6 +122,9 @@ CallManager.prototype.handleClient = function (client) {
     //join client socket to room
     rec.join(message.conek);
     client.join(message.conek);
+
+    //log call
+    //var callId = uuid.
   });
 
   //decline message
@@ -184,7 +190,6 @@ CallManager.prototype.handleClient = function (client) {
     var socket = self.io.sockets.connected[message.to];
     message.from = client.id;
     if (socket) {
-      logger.info('forward message');
       socket.emit(MSGTYPE.SDP, message);
     }
   });
