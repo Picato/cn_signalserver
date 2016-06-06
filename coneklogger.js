@@ -7,13 +7,30 @@ function ConekLogger(opts) {
   this.restapi = opts;
 }
 
+/**
+ * log chat & call
+ * @param args
+ */
 ConekLogger.prototype.logchat = function(args) {
-  if (!args || !args.payload) return;
+  if (!args) return;
 
+  var type = args.type, content = null, from = null;
+  if (type == 'chat') {
+    if (!args.payload) return;
+
+    content = args.payload.content;
+    from = args.payload.from;
+  }
+  else {
+    content = args.content;
+    from = args.from;
+  }
+  console.log('log args', args);
   var log = {
     conek: args.conek,
-    from: args.from,
-    content: args.payload.content
+    from: from,
+    content: content,
+    type: type
   }
 
   this.client.post(this.restapi.chat, {
@@ -22,12 +39,6 @@ ConekLogger.prototype.logchat = function(args) {
     if (!error && response.statusCode == 200) {
       console.log(body)
     }
-  });
-}
-
-ConekLogger.prototype.logcall = function(args) {
-  this.client.post(this.restapi.call, args, function(data) {
-
   });
 }
 
