@@ -281,6 +281,44 @@ UserManager.prototype.clientDisconnect = function(id, cb) {
 }
 
 /**
+ * set call obj for operator, visitor
+ * @param cid customer id
+ * @param oid/vid operator/visitor id
+ * @param osid/vsid socket id
+ * @param uuid uniqe id to specify call
+ */
+UserManager.prototype.setCallPeer = function(cid, oid, vid, osid, vsid, uuid) {
+  console.log('setcallpeer');
+  //find customer
+  var self = this;
+  var customer = _.find(self.list, function(l) {
+    return l.id == cid;
+  });
+
+  if (!customer)
+    return;
+
+  var operator = _.find(customer.operators, function(opr) {
+    return opr.id == oid;
+  });
+  if (operator)
+    operator.call = {
+      socket: osid,
+      uuid: uuid
+    };
+
+  var visitor = _.find(customer.visitors, function(v) {
+    return v.id == vid;
+  });
+
+  if (visitor)
+    visitor.call = {
+      socket: vsid,
+      uuid: uuid
+    };
+}
+
+/**
  * check an user offline
  * @param type
  * @param customer

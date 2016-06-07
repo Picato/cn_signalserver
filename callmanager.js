@@ -110,7 +110,6 @@ CallManager.prototype.handleClient = function (client) {
     logger.info('accept msg--', message);
     var rec = self.io.sockets.connected[message.ts];
 
-    logger.info('forward accept msg to', client.id);
     //forward accept message
     rec.emit(MSGTYPE.ACCEPT, {
       id: client.id,
@@ -124,7 +123,31 @@ CallManager.prototype.handleClient = function (client) {
     client.join(message.conek);
 
     //log call
-    //var callId = uuid.
+    var callId = uuid.v1();
+
+    self.conekLogger.logchat({
+      conek: message.conek,
+      from: message.from,
+      content: callId,
+      type: 'call'
+    });
+
+    //set caller/callee
+    var cid = message.cid;
+    var oid, vid, osid, vsid;
+    if (message.from == 'o') {
+      oid = message.fid;
+      vid = message.tid;
+      osid = client.id;
+      vsid = rec.id;
+    } else {
+      oid = message.tid;
+      vid = message.fid;
+      osid = rec.id;
+      vsid = client.id;
+    }
+
+    self.userManager.setCallPeer(cid, oid, vid, osid, vsid, callId);
   });
 
   //decline message
@@ -150,6 +173,7 @@ CallManager.prototype.handleClient = function (client) {
       logger.info('broadcast to room');
       //emit to all sockets
       room.emit(MSGTYPE.MESSAGE, message);
+
       self.conekLogger.logchat(message);
     }
   });
