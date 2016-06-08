@@ -214,27 +214,29 @@ UserManager.prototype.setConek = function(cid, oid, vid, conek) {
  * @param id
  * @param cb inform visitor/operator offline
  */
-UserManager.prototype.clientDisconnect = function(id, cb) {
-  var self = this, cus, operator, visitor, sIndex, oIndex;
-  _.some(self.list, function(customer) {
-    cus = customer;
-    var operators = customer.operators;
-    _.some(operators, function(o, index) {
-      oIndex = index;
-      sIndex = o.sockets.indexOf(id);
-      if ( sIndex >= 0) {
-        operator = o;
-        return true;
-      }
+UserManager.prototype.clientDisconnect = function(id, vid, cid, action, cb) {
+  var self = this, operator = null, visitor = null, sIndex = -1;
+  var customer = _.find(self.list, function(l) {
+    return l.id == cid;
+  });
+  if (customer) {
+    operator = _.find(customer.operators, function(l) {
+      sIndex = l.sockets.indexOf(id);
+      return action == 'call'? l.call.socket == id: sIndex >= 0;
     });
+
+    //check operator
     if (operator) {
+      if (action == 'call') {
+        return cb(null, {action: 'call', type: 'operator', uuid: operator.call.uuid, socket: operator.call.socket});
+      }
       operator.sockets.splice(sIndex, 1);
       if (operator.sockets.length == 0) {
         //cus.operators.splice(oIndex, 1);
         var uid = operator.id;
 
         setTimeout(function() {
-          checkOffline('operator', cus, uid, function(found) {
+          checkOffline('operator', customer, uid, function(found) {
             if (found) {
               return cb(null, found);
             }
@@ -243,25 +245,23 @@ UserManager.prototype.clientDisconnect = function(id, cb) {
       }
       return true;
     }
-    var visitors = customer.visitors;
-    console.log('visitors  for closing', visitors);
-    _.some(visitors, function(v, index) {
-      oIndex = index;
 
-      sIndex = v.sockets.indexOf(id);
-      if (sIndex >= 0) {
-        visitor = v;
-        return true;
-      }
+    //check visitor
+    visitor = _.find(customer.visitors, function(l) {
+      sIndex = l.sockets.indexOf(id);
+      return action == 'call'? l.call.socket == id : sIndex >= 0;
     });
     if (visitor) {
+      if (action == 'call') {
+        return cb(null, {action: 'call', type: 'visitor', uuid: visitor.call.uuid, socket: visitor.call.socket});
+      }
       visitor.sockets.splice(sIndex, 1);
       if (visitor.sockets.length == 0) {
         //cus.visitors.splice(oIndex, 1);
         var uid = visitor.id;
 
         setTimeout(function() {
-          checkOffline('visitor', cus, uid, function(found) {
+          checkOffline('visitor', customer, uid, function(found) {
             if (found) {
               return cb(null, found);
             }
@@ -271,7 +271,7 @@ UserManager.prototype.clientDisconnect = function(id, cb) {
       }
       return true;
     }
-  });
+  }
 
   var type = null, ret;
   if (operator) { type = 'operator'; }
@@ -288,15 +288,17 @@ UserManager.prototype.clientDisconnect = function(id, cb) {
  * @param uuid uniqe id to specify call
  */
 UserManager.prototype.setCallPeer = function(cid, oid, vid, osid, vsid, uuid) {
-  console.log('setcallpeer');
+  console.log('setcallpeer cid=', cid, ' oid=', oid, ' vid=', vid);
   //find customer
   var self = this;
   var customer = _.find(self.list, function(l) {
     return l.id == cid;
   });
 
-  if (!customer)
+  if (!customer) {
+    console.log('setcallpeer - no customer');
     return;
+  }
 
   var operator = _.find(customer.operators, function(opr) {
     return opr.id == oid;
@@ -306,7 +308,8 @@ UserManager.prototype.setCallPeer = function(cid, oid, vid, osid, vsid, uuid) {
       socket: osid,
       uuid: uuid
     };
-
+  else
+    console.log('setcallpeer - no operator');
   var visitor = _.find(customer.visitors, function(v) {
     return v.id == vid;
   });
@@ -316,6 +319,8 @@ UserManager.prototype.setCallPeer = function(cid, oid, vid, osid, vsid, uuid) {
       socket: vsid,
       uuid: uuid
     };
+  else
+    console.log('setcallpeer - no visitor');
 }
 
 /**
@@ -326,7 +331,7 @@ UserManager.prototype.setCallPeer = function(cid, oid, vid, osid, vsid, uuid) {
  */
 function checkOffline(type, customer, uid, cb) {
   //find user
-  var user = null, index = null;
+  var user = null, index = null, uuid = null;
   var isOl = false;
 
   if (type == 'operator') {
@@ -335,6 +340,7 @@ function checkOffline(type, customer, uid, cb) {
       return o.id == uid;
     });
     if (user && user.sockets.length == 0) {
+      uuid = user.uuid;
       customer.operators.splice(index, 1);
       isOl = true;
     }
@@ -344,6 +350,7 @@ function checkOffline(type, customer, uid, cb) {
       return v.id == uid;
     });
     if (user && user.sockets.length == 0) {
+      uuid = user.uuid;
       customer.visitors.splice(index, 1);
       isOl = true;
     }
@@ -356,7 +363,8 @@ function checkOffline(type, customer, uid, cb) {
     return cb({
       type: type,
       cid: customer.id,
-      uid: uid
+      uid: uid,
+      uuid: uuid
     });
   }
 

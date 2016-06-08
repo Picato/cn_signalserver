@@ -53,6 +53,7 @@ CallManager.prototype.handleClient = function (client) {
 
       if (message.type == 'call') {
         message.fs = client.id;
+        logger.info('invite call, handshake=', client.handshake.query);
       }
 
       //invite message
@@ -179,10 +180,22 @@ CallManager.prototype.handleClient = function (client) {
   });
 
   client.on(MSGTYPE.DISCONNECT, function() {
-    logger.info('disconnect');
-    self.userManager.clientDisconnect(client.id, function(err, obj) {
-      if (err)
+    var cid = client.handshake.query.cid;
+    var vid = client.handshake.query.vid;
+    var action = client.handshake.query.type;
+    var conek = client.handshake.query.conek;
+    logger.info('disconnect vid=', vid, '  cid=', cid, ' action=', action, ' conek=', conek);
+    // broarcast
+    var room = client.broadcast.to(conek);
+    if (room) {
+      logger.info('broadcast to room');
+      room.emit(MSGTYPE.DECLINE, {cid: cid, vid: vid, oid: "oid"});
+    }
+    self.userManager.clientDisconnect(client.id, vid, cid, action, function(err, obj) {
+      if (err) {
+        logger.info(err);
         return;
+      }
 
       logger.info('handle disconnect', obj);
 
@@ -197,14 +210,29 @@ CallManager.prototype.handleClient = function (client) {
             _.each(operator.sockets, function (s) {
               socket = self.io.sockets.connected[s];
 
-              if (socket)
-                socket.emit(MSGTYPE.VISITOR_LEAVE, {id: obj.uid})
+              if (socket) {
+                logger.log('emit visitor leave,')
+                socket.emit(MSGTYPE.VISITOR_LEAVE, {id: obj.uid});
+
+              }
+
             });
           });
         });
       } else {
         //TODO handle operator offline
       }
+
+      if (obj.action == 'call') {
+        self.conekLogger.logchat({
+          conek: null,
+          from: null,
+          content: obj.uuid,
+          type: 'call'
+        });
+        //TODO: inform other clients to close video box
+      }
+
     });
   });
 
