@@ -44,8 +44,14 @@ CallManager.prototype.handleClient = function (client) {
 
       rSockets = self.userManager.getVisitorSockets(cid, vid);
       sSockets = self.userManager.getOperatorSockets(cid, oid);
-    } else {  //o --> o
+    } else if (message.from == 'o' && message.to == 's') { //o-->conek supporter
+      oid = message.tid;
+      rSockets = self.userManager.getOperatorSockets(cid, oid);
 
+      sSockets = [];
+      sSockets.push(client.id);
+    } else {  //o --> o
+      return;
     }
 
     if (sSockets && sSockets.length > 0 && rSockets && rSockets.length > 0) {
