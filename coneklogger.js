@@ -54,6 +54,20 @@ ConekLogger.prototype.logmisscall = function(args) {
       console.log(body)
     }
   });
-}
+};
+
+/**
+ * inform Sails Server operator offline
+ * @param message
+ */
+ConekLogger.prototype.operatorOffline = function(message) {
+  this.client.post(this.restapi.offline, {
+    json: message
+  }, function(error, response, body) {
+    if (!error && response.statusCode == 200) {
+      console.log(body)
+    }
+  });
+};
 
 module.exports = ConekLogger;
