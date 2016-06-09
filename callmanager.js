@@ -118,15 +118,19 @@ CallManager.prototype.handleClient = function (client) {
     var rec = self.io.sockets.connected[message.ts];
 
     //forward accept message
-    rec.emit(MSGTYPE.ACCEPT, {
-      id: client.id,
-      resource: client.resources,
-      conek: message.conek,
-      type: message.type
-    });
+    if (rec) {
+      rec.emit(MSGTYPE.ACCEPT, {
+        id: client.id,
+        resource: client.resources,
+        conek: message.conek,
+        type: message.type
+      });
+
+      //join room
+      rec.join(message.conek);
+    }
 
     //join client socket to room
-    rec.join(message.conek);
     client.join(message.conek);
 
     //log call
@@ -163,7 +167,8 @@ CallManager.prototype.handleClient = function (client) {
     var rec = self.io.sockets.connected[message.to];
 
     //inform caller
-    rec.emit(MSGTYPE.DECLINE, {type: message.type});
+    if (rec)
+      rec.emit(MSGTYPE.DECLINE, {type: message.type});
 
     //log miscall
     self.conekLogger.logmisscall(message);
