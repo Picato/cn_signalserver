@@ -277,79 +277,67 @@ UserManager.prototype.setConek = function(cid, oid, vid, conek) {
 }
 /**
  * handle client disconnect
- * @param id
+ * @param sid socket id
  * @param cb inform visitor/operator offline
  */
-UserManager.prototype.clientDisconnect = function(id, vid, cid, action, cb) {
-  var self = this, operator = null, visitor = null, sIndex = -1;
-  var customer = _.find(self.list, function(l) {
-    return l.id == cid;
-  });
-  if (customer) {
-    operator = _.find(customer.operators, function(l) {
-      sIndex = l.sockets.indexOf(id);
-      return action == 'call'? l.call.socket == id: sIndex >= 0;
-    });
 
-    //check operator
-    if (operator) {
-      if (action == 'call') {
-        return cb(null, {action: 'call', type: 'operator', uuid: operator.call.uuid, socket: operator.call.socket});
-      }
-      operator.sockets.splice(sIndex, 1);
-      if (operator.sockets.length == 0) {
-        //cus.operators.splice(oIndex, 1);
-        var uid = operator.id;
+ UserManager.prototype.clientDisconnect = function(type, sid, id, cid, action, cb) {
+   var self = this, user = null, sIndex = -1;
 
-        setTimeout(function() {
-          checkOffline('operator', customer, uid, function(found) {
-            if (found) {
-              return cb(null, found);
-            }
-          });
-        } , 3000); //3 seconds
-      }
-      return true;
-    }
+   var customer = _.find(self.list, function(l) {
+     return l.id == cid;
+   });
 
-    //check visitor
-    visitor = _.find(customer.visitors, function(l) {
-      sIndex = l.sockets.indexOf(id);
-      return action == 'call'? l.call.socket == id : sIndex >= 0;
-    });
-    if (visitor) {
-      if (action == 'call') {
-        return cb(null, {action: 'call', type: 'visitor', uuid: visitor.call.uuid, socket: visitor.call.socket});
-      }
+   if (customer) {
+     if (type == 'operator') {
+       user = _.find(customer.operators, function (l) {
+         return l.id == id;
+       });
+     } else {
+       user = _.find(customer.visitors, function(l) {
+         return l.id == id;
+       });
+     }
+     //check operator
+     if (user) {
+       if (action == 'call') {
+         return cb(null, {action: 'call', type: 'operator', uuid: user.call.uuid, socket: user.call.socket});
+       }
 
-      //TODO delete some redundant info before saving
-      visitor.customer = cid;
-      self.saveUser(visitor);
+       _.find(user.sockets, function(socket, index) {
+         sIndex = index;
+         return socket == sid;
+       });
 
-      visitor.sockets.splice(sIndex, 1);
-      if (visitor.sockets.length == 0) {
-        //cus.visitors.splice(oIndex, 1);
-        var uid = visitor.id;
+       if (type == 'visitor') {
+         //TODO delete some redundant info before saving
+         visitor.customer = cid;
+         self.saveUser(visitor);
+       }
 
-        setTimeout(function() {
-          checkOffline('visitor', customer, uid, function(found) {
-            if (found) {
-              return cb(null, found);
-            }
-          });
+       user.sockets.splice(sIndex, 1);
 
-        }, 3000); //3 seconds
-      }
-      return true;
-    }
-  }
+       if (user.sockets.length == 0) {
+         //cus.operators.splice(oIndex, 1);
+         var uid = user.id;
 
-  var type = null, ret;
-  if (operator) { type = 'operator'; }
-  if (visitor) { type = 'visitor'; }
-  if (!type)
-    return cb({error: 'not found'});
-}
+         setTimeout(function() {
+           checkOffline(type, customer, uid, function(found) {
+             console.log('found', found);
+             if (found) {
+               return cb(null, found);
+             }
+           });
+         } , 3000); //3 seconds
+       }
+     } else {
+       return cb({error: 'not found'});
+     }
+   } else {
+     return cb({error: 'not found'});
+   }
+ }
+
 
 /**
  * set call obj for operator, visitor
@@ -432,7 +420,6 @@ function checkOffline(type, customer, uid, cb) {
 
   if (isOl) {
     return cb({
-      type: type,
       cid: customer.id,
       uid: uid,
       uuid: uuid

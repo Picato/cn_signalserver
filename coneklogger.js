@@ -5,7 +5,7 @@
 function ConekLogger(opts) {
   this.client = require('request');
   this.restapi = opts;
-  console.log('init ConekLogger, config=', opts);
+  //console.log('init ConekLogger, config=', opts);
 }
 
 /**
@@ -15,20 +15,19 @@ function ConekLogger(opts) {
 ConekLogger.prototype.logchat = function(args) {
   if (!args) return;
 
-  var type = args.type, content = null, from = null;
+  var type = args.type, content = null, direction = '';
   if (type == 'chat') {
     if (!args.payload) return;
     content = args.payload.content;
-  }
-  else {
+    direction = args.payload.from;
+  } else {
     content = args.content;
+    direction = args.from;
   }
-  from = args.from;
 
-  console.log('log args', args);
   var log = {
     conek: args.conek,
-    from: from,
+    from: direction,
     content: content,
     type: type
   }
@@ -55,7 +54,21 @@ ConekLogger.prototype.logmisscall = function(args) {
       console.log(body)
     }
   });
-}
+};
+
+/**
+ * inform Sails Server operator offline
+ * @param message
+ */
+ConekLogger.prototype.operatorOffline = function(message) {
+  this.client.post(this.restapi.offline, {
+    json: message
+  }, function(error, response, body) {
+    if (!error && response.statusCode == 200) {
+      console.log(body)
+    }
+  });
+};
 
 ConekLogger.prototype.saveUser = function(args) {
   console.log('save visitor to server, args = ', args);
