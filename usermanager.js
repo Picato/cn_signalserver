@@ -311,8 +311,8 @@ UserManager.prototype.setConek = function(cid, oid, vid, conek) {
 
        if (type == 'visitor') {
          //TODO delete some redundant info before saving
-         visitor.customer = cid;
-         self.saveUser(visitor);
+         user.customer = cid;
+         self.saveUser(user);
        }
 
        user.sockets.splice(sIndex, 1);
