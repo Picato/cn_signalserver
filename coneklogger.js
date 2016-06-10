@@ -13,18 +13,20 @@ function ConekLogger(opts) {
  */
 ConekLogger.prototype.logchat = function(args) {
   if (!args) return;
-
-  var type = args.type, content = null;
+  
+  var type = args.type, content = null, direction = '';
   if (type == 'chat') {
     if (!args.payload) return;
     content = args.payload.content;
+    direction = args.payload.from;
   } else {
     content = args.content;
+    direction = args.from;
   }
 
   var log = {
     conek: args.conek,
-    from: args.from,
+    from: direction,
     content: content,
     type: type
   }
