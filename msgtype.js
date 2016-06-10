@@ -35,7 +35,8 @@ module.exports = {
   VISITOR_JOIN: 'visitorjoin',
   VISITOR_LEAVE: 'visitorleave',
   VISITORS: 'visitors',
-
+  UPDATE_VISITOR: 'updatevisitor', //update visitor info
+  VISITOR_PAGE_CHANGE: 'visitorpagechange',
   //info
   OPERATOR_SOCKET_ID: 'operatorid',
 

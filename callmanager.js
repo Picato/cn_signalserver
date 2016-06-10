@@ -258,7 +258,13 @@ CallManager.prototype.handleClient = function (client) {
   client.on(MSGTYPE.UPDATEUSERID, function(details) {
     logger.info('update id', details);
     self.userManager.updateId(client.id, details.id);
-  })
+  });
+
+  //update visitor infor (eg: name, email ... ) from operator
+  client.on(MSGTYPE.UPDATE_VISITOR, function(data) {
+    logger.info('updatevisitor', data);
+    self.userManager.updateUser(data);
+  });
 }
 
 /**
@@ -282,14 +288,18 @@ CallManager.prototype.addUser = function (socket, data) {
     if (data.type == 'operator') {
       //emit all oll visitors to operator
       var ret = [];
-
       _.each(details.visitors, function (detail) {
 
         ret.push({
           id: detail.id,
           name: detail.name,
+          email: detail.email,
+          phone: detail.phone,
+          note: detail.note,
+          tag: detail.tag,
           join: detail.join,
-          conek: detail.conek
+          conek: detail.conek,
+          exInfo: detail.exInfo
         });
       });
 
@@ -297,23 +307,28 @@ CallManager.prototype.addUser = function (socket, data) {
     } else { //handle new visitor joins
       logger.info('info visitor join', details);
 
-      if (details.type == 'new') {
+      //if (details.type == 'new') {
         //remove unnecessary information
-        delete data.cid;
-        delete data.token;
-        delete data.key;
-        delete data.type;
+      delete data.cid;
+      delete data.token;
+      delete data.key;
+      delete data.type;
 
-        var sendSocket;
-        _.each(details.operators, function (o) { //each operator
-          _.each(o.sockets, function (s) {
-            sendSocket = self.io.sockets.connected[s];
-            if (sendSocket) {
+      var sendSocket;
+      _.each(details.operators, function (o) { //each operator
+        _.each(o.sockets, function (s) {
+          sendSocket = self.io.sockets.connected[s];
+          if (sendSocket) {
+            if (details.type == 'new') {
               sendSocket.emit(MSGTYPE.VISITOR_JOIN, data);
+            } else {
+              logger.info('visitorpagechange ', data.exInfo.currentPage);
+              sendSocket.emit(MSGTYPE.VISITOR_PAGE_CHANGE, {id: data.id, currentPage: data.exInfo.currentPage});
             }
-          });
+          }
         });
-      }
+      });
+      //}
     }
 
     //if have coneks

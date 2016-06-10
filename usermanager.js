@@ -23,7 +23,6 @@ function UserManager() {
  */
 UserManager.prototype.addUser = function(type, socket, data, cb) {
   var self = this, user;
-
   //find customer
   var customer = _.find(self.list, function(c) {
     return c.id == data.cid;
@@ -46,6 +45,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
     if (type == 'visitor') {
       user.name = data.name;
       user.conek = null;    //visitor has only one coneks
+      user.exInfo = data.exInfo;
       customer.visitors.push(user);
     } else {
       user.coneks = [];    //operator has multiple coneks
@@ -59,6 +59,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
 
   var coneks = [];
 
+  //if found visitor/operator => return conek
   if (type == 'visitor') {
     user = _.find(customer.visitors, function(v) {
       return v.id == data.id;
@@ -72,7 +73,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
       else
         coneks = null;
 
-      return cb(null, { coneks: coneks });
+      return cb(null, { coneks: coneks, operators: customer.operators });
     }
   } else {
     user = _.find(customer.operators, function(o) {
@@ -105,6 +106,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
   if (type == 'visitor') {
     user.name = data.name;
     user.conek = null;
+    user.exInfo = data.exInfo;
     customer.visitors.push(user);
 
     //return all operators off customer
@@ -122,6 +124,34 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
     });
   }
   logger.info('add user', user, customer);
+};
+
+UserManager.prototype.updateUser = function(data) {
+  var self = this;
+  //find customer
+  var customer = _.find(self.list, function(c) {
+    return c.id == data.customer;
+  });
+
+  if (!customer)
+    return;
+
+  visitor = _.find(customer.visitors, function(v) {
+    return v.id == data.id;
+  });
+  if (!visitor)
+    return;
+
+  if (data.tag == null || data.tag == undefined) {
+    visitor.name = data.name;
+    visitor.phone = data.phone;
+    visitor.email = data.email;
+    visitor.note = data.note;
+  } else {
+    visitor.tag = data.tag;
+  }
+
+  logger.info('updateUser successfully', visitor);
 };
 
 UserManager.prototype.findOperators = function(cid, cb) {
