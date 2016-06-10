@@ -13,7 +13,7 @@ function CallManager(io, config) {
   this.io = io;
   this.config = config;
 
-  this.userManager = new UserManager();
+  this.userManager = new UserManager(config);
 
   //init conek logger
   this.conekLogger = new ConekLogger(config.logapi);
@@ -219,6 +219,9 @@ CallManager.prototype.handleClient = function (client) {
             });
           });
         });
+
+        //handle saving user to db
+        //self.userManager.saveUser(cid, vid, self.conekLogger);
       } else {
         //TODO handle operator offline
       }
@@ -299,7 +302,8 @@ CallManager.prototype.addUser = function (socket, data) {
           tag: detail.tag,
           join: detail.join,
           conek: detail.conek,
-          exInfo: detail.exInfo
+          exInfo: detail.exInfo,
+          pages: detail.pages
         });
       });
 
@@ -320,10 +324,14 @@ CallManager.prototype.addUser = function (socket, data) {
           sendSocket = self.io.sockets.connected[s];
           if (sendSocket) {
             if (details.type == 'new') {
+              data.join = new Date();
+              data.pages = details.visitor.pages;
+              data.currentPage = details.visitor.currentPage;
+              logger.info('emit visitor join ', data);
               sendSocket.emit(MSGTYPE.VISITOR_JOIN, data);
             } else {
               logger.info('visitorpagechange ', data.exInfo.currentPage);
-              sendSocket.emit(MSGTYPE.VISITOR_PAGE_CHANGE, {id: data.id, currentPage: data.exInfo.currentPage});
+              sendSocket.emit(MSGTYPE.VISITOR_PAGE_CHANGE, {id: data.id, currentPage: data.exInfo.currentPage, pages: details.pages});
             }
           }
         });

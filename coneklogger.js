@@ -5,6 +5,7 @@
 function ConekLogger(opts) {
   this.client = require('request');
   this.restapi = opts;
+  console.log('init ConekLogger, config=', opts);
 }
 
 /**
@@ -52,6 +53,17 @@ ConekLogger.prototype.logmisscall = function(args) {
   }, function(error, response, body) {
     if (!error && response.statusCode == 200) {
       console.log(body)
+    }
+  });
+}
+
+ConekLogger.prototype.saveUser = function(args) {
+  console.log('save visitor to server, args = ', args);
+  this.client.post(this.restapi.saveuser, {
+    json: args
+  }, function(error, response, body) {
+    if (!error && response.statusCode == 200) {
+      console.log('save visitor to server successfully');
     }
   });
 }

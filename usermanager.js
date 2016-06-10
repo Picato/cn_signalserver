@@ -2,14 +2,15 @@
  * Created by tuan on 30/03/2016.
  */
 var _ = require('lodash'),
-  logger = require('winston');
-
+  logger = require('winston'),
+  ConekLogger = require('./coneklogger');
 /**
  * @constructor manage all users
  *              will be upgrade to db/redis base
  */
-function UserManager() {
+function UserManager(config) {
   this.list = [];
+  this.conekLogger = new ConekLogger(config.logapi);
 }
 
 /**
@@ -46,6 +47,8 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
       user.name = data.name;
       user.conek = null;    //visitor has only one coneks
       user.exInfo = data.exInfo;
+      user.pages = [];
+      user.push(data.exInfo.currentPage);
       customer.visitors.push(user);
     } else {
       user.coneks = [];    //operator has multiple coneks
@@ -65,7 +68,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
       return v.id == data.id;
     });
 
-    if (user) {
+    if (user) { //this case happenned when visitor changing the page
       console.log('find conek', user);
       user.sockets.push(socket);
       if (user.conek)
@@ -73,7 +76,10 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
       else
         coneks = null;
 
-      return cb(null, { coneks: coneks, operators: customer.operators });
+      if (user.pages.indexOf(data.exInfo.currentPage) < 0) {
+        user.pages.push(data.exInfo.currentPage);
+      }
+      return cb(null, { coneks: coneks, operators: customer.operators, pages: user.pages });
     }
   } else {
     user = _.find(customer.operators, function(o) {
@@ -107,12 +113,15 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
     user.name = data.name;
     user.conek = null;
     user.exInfo = data.exInfo;
+    user.pages = [];
+    user.pages.push(data.exInfo.currentPage);
     customer.visitors.push(user);
 
     //return all operators off customer
     return cb(null, {
       type: 'new',
-      operators: customer.operators
+      operators: customer.operators,
+      visitor: user
     });
   } else {
     user.coneks = [];
@@ -147,11 +156,38 @@ UserManager.prototype.updateUser = function(data) {
     visitor.phone = data.phone;
     visitor.email = data.email;
     visitor.note = data.note;
-  } else {
+    visitor.hasChange = true;
+    visitor.operator = data.operator;
+  } else  {
     visitor.tag = data.tag;
+    visitor.hasChange = true;
+    visitor.operator = data.operator;
   }
+  // } else if (type == 'page') {
+  //   if (visitor.pages == null || visitor.pages == undefined) {
+  //     visitor.pages = [];
+  //     visitor.pages.push(data.currentPage);
+  //   } else {
+  //     if (visitor.pages.indexOf(data.currentPage) <= 0) {
+  //       visitor.pages.push(data.currentPage);
+  //     }
+  //   }
+  // }
 
   logger.info('updateUser successfully', visitor);
+};
+
+UserManager.prototype.saveUser = function(visitor) {
+  logger.info('handle saving user to db, visitor=', visitor);
+  var self = this;
+
+  //if visitor join and doing nothing & operator doing nothing (no note changes)
+  if (!visitor.hasChange) {
+    return;
+  }
+
+  //save to server, wheather visitor start chatting or not
+  self.conekLogger.saveUser(visitor);
 };
 
 UserManager.prototype.findOperators = function(cid, cb) {
@@ -285,6 +321,11 @@ UserManager.prototype.clientDisconnect = function(id, vid, cid, action, cb) {
       if (action == 'call') {
         return cb(null, {action: 'call', type: 'visitor', uuid: visitor.call.uuid, socket: visitor.call.socket});
       }
+
+      //TODO delete some redundant info before saving
+      visitor.customer = cid;
+      self.saveUser(visitor);
+
       visitor.sockets.splice(sIndex, 1);
       if (visitor.sockets.length == 0) {
         //cus.visitors.splice(oIndex, 1);
