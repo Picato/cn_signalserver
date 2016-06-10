@@ -48,7 +48,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
       user.conek = null;    //visitor has only one coneks
       user.exInfo = data.exInfo;
       user.pages = [];
-      user.push(data.exInfo.currentPage);
+      user.pages.push(data.exInfo.currentPage);
       customer.visitors.push(user);
     } else {
       user.coneks = [];    //operator has multiple coneks
