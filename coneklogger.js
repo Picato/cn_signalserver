@@ -14,20 +14,17 @@ function ConekLogger(opts) {
 ConekLogger.prototype.logchat = function(args) {
   if (!args) return;
 
-  var type = args.type, content = null, from = null;
+  var type = args.type, content = null;
   if (type == 'chat') {
     if (!args.payload) return;
     content = args.payload.content;
-  }
-  else {
+  } else {
     content = args.content;
   }
-  from = args.from;
 
-  console.log('log args', args);
   var log = {
     conek: args.conek,
-    from: from,
+    from: args.from,
     content: content,
     type: type
   }
@@ -54,6 +51,20 @@ ConekLogger.prototype.logmisscall = function(args) {
       console.log(body)
     }
   });
-}
+};
+
+/**
+ * inform Sails Server operator offline
+ * @param message
+ */
+ConekLogger.prototype.operatorOffline = function(message) {
+  this.client.post(this.restapi.offline, {
+    json: message
+  }, function(error, response, body) {
+    if (!error && response.statusCode == 200) {
+      console.log(body)
+    }
+  });
+};
 
 module.exports = ConekLogger;

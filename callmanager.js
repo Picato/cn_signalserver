@@ -44,8 +44,14 @@ CallManager.prototype.handleClient = function (client) {
 
       rSockets = self.userManager.getVisitorSockets(cid, vid);
       sSockets = self.userManager.getOperatorSockets(cid, oid);
-    } else {  //o --> o
+    } else if (message.from == 'o' && message.to == 's') { //o-->conek supporter
+      oid = message.tid;
+      rSockets = self.userManager.getOperatorSockets(cid, oid);
 
+      sSockets = [];
+      sSockets.push(client.id);
+    } else {  //o --> o
+      return;
     }
 
     if (sSockets && sSockets.length > 0 && rSockets && rSockets.length > 0) {
@@ -112,15 +118,19 @@ CallManager.prototype.handleClient = function (client) {
     var rec = self.io.sockets.connected[message.ts];
 
     //forward accept message
-    rec.emit(MSGTYPE.ACCEPT, {
-      id: client.id,
-      resource: client.resources,
-      conek: message.conek,
-      type: message.type
-    });
+    if (rec) {
+      rec.emit(MSGTYPE.ACCEPT, {
+        id: client.id,
+        resource: client.resources,
+        conek: message.conek,
+        type: message.type
+      });
+
+      //join room
+      rec.join(message.conek);
+    }
 
     //join client socket to room
-    rec.join(message.conek);
     client.join(message.conek);
 
     //log call
@@ -157,7 +167,8 @@ CallManager.prototype.handleClient = function (client) {
     var rec = self.io.sockets.connected[message.to];
 
     //inform caller
-    rec.emit(MSGTYPE.DECLINE, {type: message.type});
+    if (rec)
+      rec.emit(MSGTYPE.DECLINE, {type: message.type});
 
     //log miscall
     self.conekLogger.logmisscall(message);
@@ -180,18 +191,32 @@ CallManager.prototype.handleClient = function (client) {
   });
 
   client.on(MSGTYPE.DISCONNECT, function() {
+    var type, id = null;
+    id = client.handshake.query.vid;
+    if (id) {
+      type = 'visitor';
+    } else {
+      type = 'operator';
+      id = client.handshake.query.oid;
+    }
+
     var cid = client.handshake.query.cid;
-    var vid = client.handshake.query.vid;
     var action = client.handshake.query.type;
     var conek = client.handshake.query.conek;
-    logger.info('disconnect vid=', vid, '  cid=', cid, ' action=', action, ' conek=', conek);
-    // broarcast
-    var room = client.broadcast.to(conek);
-    if (room) {
-      logger.info('broadcast to room');
-      room.emit(MSGTYPE.DECLINE, {cid: cid, vid: vid, oid: "oid"});
+
+    logger.info('disconnect id=', id, '  cid=', cid, ' action=', action, ' conek=', conek);
+
+    //inform room
+    if (conek != undefined && conek) {
+      var room = client.broadcast.to(conek);
+
+      if (room) {
+        logger.info('broadcast to room');
+        room.emit(MSGTYPE.DECLINE, {cid: cid, vid: id, oid: "oid"});
+      }
     }
-    self.userManager.clientDisconnect(client.id, vid, cid, action, function(err, obj) {
+
+    self.userManager.clientDisconnect(type, client.id, id, cid, action, function(err, obj) {
       if (err) {
         logger.info(err);
         return;
@@ -200,7 +225,7 @@ CallManager.prototype.handleClient = function (client) {
       logger.info('handle disconnect', obj);
 
       //visitor off
-      if (obj.type == 'visitor') {
+      if (type == 'visitor') {
         self.userManager.findOperators(obj.cid, function (err, operators) {
           if (err || !operators)
             return;
@@ -213,14 +238,16 @@ CallManager.prototype.handleClient = function (client) {
               if (socket) {
                 logger.log('emit visitor leave,')
                 socket.emit(MSGTYPE.VISITOR_LEAVE, {id: obj.uid});
-
               }
 
             });
           });
         });
       } else {
-        //TODO handle operator offline
+        //inform sails server
+        self.conekLogger.operatorOffline({id: obj.uid});
+
+        //TODO inform visitor abount operator offline
       }
 
       if (obj.action == 'call') {
