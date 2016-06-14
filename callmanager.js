@@ -174,6 +174,29 @@ CallManager.prototype.handleClient = function (client) {
     self.conekLogger.logmisscall(message);
   });
 
+  //busy message
+  client.on(MSGTYPE.BUSY, function(message) {
+    logger.info('busy msg', message);
+    var rec = self.io.sockets.connected[message.to];
+    if (rec){
+      logger.info('emit to talk');
+      rec.emit(MSGTYPE.BUSY, message);
+    }
+
+    var conek = message.conek;
+    //inform room
+    if (conek != undefined && conek) {
+      var room = client.broadcast.to(conek);
+      if (room) {
+        logger.info('broadcast busy to room');
+        room.emit(MSGTYPE.BUSY, message);
+      }
+    }
+
+    //log miscall
+    //self.conekLogger.logmisscall(message);
+  });
+
   // pass a message to another id
   client.on(MSGTYPE.MESSAGE, function (message) {
     logger.info('on message', message);

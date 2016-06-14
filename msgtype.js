@@ -29,6 +29,7 @@ module.exports = {
   CALLOFF: 'calloff',
   PEERCALLOFF: 'peercalloff',
   PEEROWNERLEAVE: 'peerownerleave',
+  BUSY: 'busy',
 
   //online visitor
   NUMBER_VISITOR: 'numbervisitor',
