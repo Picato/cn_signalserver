@@ -212,7 +212,7 @@ CallManager.prototype.handleClient = function (client) {
 
       if (room) {
         logger.info('broadcast to room');
-        room.emit(MSGTYPE.DECLINE, {cid: cid, vid: id, oid: "oid"});
+        room.emit(MSGTYPE.CALLOFF, {cid: cid, conek: conek});
       }
     }
 
