@@ -235,7 +235,7 @@ CallManager.prototype.handleClient = function (client) {
 
       if (room) {
         logger.info('broadcast to room');
-        room.emit(MSGTYPE.CALLOFF, {cid: cid, conek: conek});
+        room.emit(MSGTYPE.CALLOFF, {cid: cid, conek: conek, type: client.handshake.query.from});
       }
     }
 
