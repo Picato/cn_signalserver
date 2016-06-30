@@ -133,6 +133,8 @@ CallManager.prototype.handleClient = function (client) {
     //join client socket to room
     client.join(message.conek);
 
+    self.sendServerInfoToClient(rec, self.config);
+    self.sendServerInfoToClient(client, self.config);
     //log call
     var callId = uuid.v1();
 
