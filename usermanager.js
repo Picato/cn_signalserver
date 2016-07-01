@@ -69,7 +69,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
     });
 
     if (user) { //this case happenned when visitor changing the page
-      console.log('find conek', user);
+      logger.info('find conek', user);
       user.sockets.push(socket);
       if (user.conek)
         coneks.push(user.conek);
@@ -271,9 +271,9 @@ UserManager.prototype.setConek = function(cid, oid, vid, conek) {
   var visitor = _.find(customer.visitors, function(v) {
     return v.id == vid;
   });
+
   if (visitor)
     visitor.conek = conek;
-  console.log('set Conek', customer);
 }
 /**
  * handle client disconnect
@@ -323,7 +323,6 @@ UserManager.prototype.setConek = function(cid, oid, vid, conek) {
 
          setTimeout(function() {
            checkOffline(type, customer, uid, function(found) {
-             console.log('found', found);
              if (found) {
                return cb(null, found);
              }
@@ -347,7 +346,6 @@ UserManager.prototype.setConek = function(cid, oid, vid, conek) {
  * @param uuid uniqe id to specify call
  */
 UserManager.prototype.setCallPeer = function(cid, oid, vid, osid, vsid, uuid) {
-  console.log('setcallpeer cid=', cid, ' oid=', oid, ' vid=', vid);
   //find customer
   var self = this;
   var customer = _.find(self.list, function(l) {
@@ -355,7 +353,7 @@ UserManager.prototype.setCallPeer = function(cid, oid, vid, osid, vsid, uuid) {
   });
 
   if (!customer) {
-    console.log('setcallpeer - no customer');
+    logger.info('setcallpeer - no customer');
     return;
   }
 
@@ -368,7 +366,7 @@ UserManager.prototype.setCallPeer = function(cid, oid, vid, osid, vsid, uuid) {
       uuid: uuid
     };
   else
-    console.log('setcallpeer - no operator');
+    logger.info('setcallpeer - no operator');
   var visitor = _.find(customer.visitors, function(v) {
     return v.id == vid;
   });
@@ -379,7 +377,7 @@ UserManager.prototype.setCallPeer = function(cid, oid, vid, osid, vsid, uuid) {
       uuid: uuid
     };
   else
-    console.log('setcallpeer - no visitor');
+    logger.info('setcallpeer - no visitor');
 }
 
 /**

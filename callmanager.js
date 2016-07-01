@@ -105,7 +105,6 @@ CallManager.prototype.handleClient = function (client) {
 
   //ringing message
   client.on(MSGTYPE.RINGING, function (message) {
-    console.log('ringing msg', message);
     var rec = self.io.sockets.connected[message.ts];
 
     //forward message
@@ -203,9 +202,7 @@ CallManager.prototype.handleClient = function (client) {
     if (!message || message.type != 'chat') return;
 
     var room = client.broadcast.to(message.conek);
-    logger.info('broadcast to room - 0');
     if (room) {
-      logger.info('broadcast to room');
       //emit to all sockets
       room.emit(MSGTYPE.MESSAGE, message);
 
@@ -234,7 +231,6 @@ CallManager.prototype.handleClient = function (client) {
       var room = client.broadcast.to(conek);
 
       if (room) {
-        logger.info('broadcast to room');
         room.emit(MSGTYPE.CALLOFF, {cid: cid, conek: conek, type: client.handshake.query.from});
       }
     }
@@ -244,8 +240,6 @@ CallManager.prototype.handleClient = function (client) {
         logger.info(err);
         return;
       }
-
-      logger.info('handle disconnect', obj);
 
       //visitor off
       if (type == 'visitor') {
@@ -259,10 +253,8 @@ CallManager.prototype.handleClient = function (client) {
               socket = self.io.sockets.connected[s];
 
               if (socket) {
-                logger.log('emit visitor leave,')
                 socket.emit(MSGTYPE.VISITOR_LEAVE, {id: obj.uid});
               }
-
             });
           });
         });
@@ -285,7 +277,6 @@ CallManager.prototype.handleClient = function (client) {
         });
         //TODO: inform other clients to close video box
       }
-
     });
   });
 

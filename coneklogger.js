@@ -1,6 +1,7 @@
 /**
  * Created by tuan on 02/04/2016.
  */
+var logger = require('winston');
 
 function ConekLogger(opts) {
   this.client = require('request');
@@ -36,7 +37,8 @@ ConekLogger.prototype.logchat = function(args) {
     json: log
   }, function(error, response, body) {
     if (!error && response.statusCode == 200) {
-      console.log(body)
+    } else {
+      logger.error('logchat, cannot log', body);
     }
   });
 }
@@ -51,7 +53,9 @@ ConekLogger.prototype.logmisscall = function(args) {
     json: log
   }, function(error, response, body) {
     if (!error && response.statusCode == 200) {
-      console.log(body)
+
+    } else {
+      logger.error('logmisscall, cannot log', body);
     }
   });
 };
@@ -65,7 +69,9 @@ ConekLogger.prototype.operatorOffline = function(message) {
     json: message
   }, function(error, response, body) {
     if (!error && response.statusCode == 200) {
-      console.log(body)
+      //console.log(body)
+    } else {
+      logger.error('operatorOffline, cannot log', body);
     }
   });
 };
@@ -76,7 +82,9 @@ ConekLogger.prototype.saveUser = function(args) {
     json: args
   }, function(error, response, body) {
     if (!error && response.statusCode == 200) {
-      console.log('save visitor to server successfully');
+      //console.log('save visitor to server successfully');
+    } else {
+      logger.error('saveUser, cannot log', body);
     }
   });
 }
