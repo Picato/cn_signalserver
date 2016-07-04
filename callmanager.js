@@ -171,6 +171,16 @@ CallManager.prototype.handleClient = function (client) {
     if (rec)
       rec.emit(MSGTYPE.DECLINE, {type: message.type});
 
+    var conek = message.conek;
+    //inform room
+    if (conek != undefined && conek) {
+      var room = client.broadcast.to(conek);
+      if (room) {
+        logger.info('broadcast decline message to room');
+        room.emit(MSGTYPE.DECLINE, message);
+      }
+    }
+
     //log miscall
     self.conekLogger.logmisscall(message);
   });
@@ -310,6 +320,19 @@ CallManager.prototype.handleClient = function (client) {
   client.on(MSGTYPE.UPDATE_VISITOR, function(data) {
     logger.info('updatevisitor', data);
     self.userManager.updateUser(data);
+  });
+
+  client.on(MSGTYPE.VISITOR_ACCEPT, function(message) {
+    console.log('visitor accept call:', message);
+    var conek = message.conek;
+    //inform room
+    if (conek != undefined && conek) {
+      var room = client.broadcast.to(conek);
+      if (room) {
+        logger.info('broadcast accept call of visitor to room');
+        room.emit(MSGTYPE.VISITOR_ACCEPT, message);
+      }
+    }
   });
 }
 
