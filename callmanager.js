@@ -169,7 +169,7 @@ CallManager.prototype.handleClient = function (client) {
 
     //inform caller
     if (rec)
-      rec.emit(MSGTYPE.DECLINE, {type: message.type});
+      rec.emit(MSGTYPE.DECLINE, {type: message.type, from: message.from});
 
     //log miscall
     self.conekLogger.logmisscall(message);
