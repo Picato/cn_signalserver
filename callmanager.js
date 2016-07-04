@@ -357,7 +357,7 @@ CallManager.prototype.addUser = function (socket, data) {
       delete data.cid;
       delete data.token;
       delete data.key;
-      delete data.type;
+      //delete data.type;
 
       var sendSocket;
       _.each(details.operators, function (o) { //each operator
@@ -383,9 +383,11 @@ CallManager.prototype.addUser = function (socket, data) {
     //if have coneks
     _.each(details.coneks, function(conek) {
       socket.join(conek);
-
-      if (data.type == 'visitor')
-        socket.emit('conek', conek);
+      console.log('on conek', data);
+      if (data.type == 'visitor'){
+        console.log('emit on conek');
+        socket.emit(MSGTYPE.CONEK, conek);
+      }
     });
   });
 }
