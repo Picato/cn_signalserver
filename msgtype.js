@@ -32,6 +32,9 @@ module.exports = {
   CONEK: 'conek',
   BUSY: 'busy',
 
+  //operator
+  OPERATOR_LEAVE: 'operatorleave',
+
   //online visitor
   NUMBER_VISITOR: 'numbervisitor',
   VISITOR_JOIN: 'visitorjoin',

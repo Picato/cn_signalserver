@@ -223,8 +223,9 @@ CallManager.prototype.handleClient = function (client) {
   });
 
   client.on(MSGTYPE.DISCONNECT, function() {
-    var type, id = null;
-    id = client.handshake.query.vid;
+    var type,
+      id = client.handshake.query.vid;
+
     if (id) {
       type = 'visitor';
     } else {
@@ -239,7 +240,7 @@ CallManager.prototype.handleClient = function (client) {
     logger.info('disconnect id=', id, '  cid=', cid, ' action=', action, ' conek=', conek);
 
     //inform room
-    if (conek != undefined && conek) {
+    if (conek != undefined && conek && action == 'call') {
       var room = client.broadcast.to(conek);
 
       if (room) {
@@ -249,7 +250,7 @@ CallManager.prototype.handleClient = function (client) {
 
     self.userManager.clientDisconnect(type, client.id, id, cid, action, function(err, obj) {
       if (err) {
-        logger.info(err);
+        logger.error(err);
         return;
       }
 
@@ -270,14 +271,21 @@ CallManager.prototype.handleClient = function (client) {
             });
           });
         });
+      } else {    //operator
+        if (obj.coneks) {
+          //inform visitor
+          _.each(obj.coneks, function(conek) {
+            var room = client.broadcast.to(conek);
 
-        //handle saving user to db
-        //self.userManager.saveUser(cid, vid, self.conekLogger);
-      } else {
-        //inform sails server
+            if (room) {
+              console.log('emit offline operator');
+              room.emit(MSGTYPE.OPERATOR_LEAVE);
+            }
+          });
+        }
+
+        //inform sails server  - set offline
         self.conekLogger.operatorOffline({id: obj.uid});
-
-        //TODO inform visitor abount operator offline
       }
 
       if (obj.action == 'call') {

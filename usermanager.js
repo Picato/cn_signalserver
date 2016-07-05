@@ -54,6 +54,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
       user.coneks = [];    //operator has multiple coneks
       customer.operators.push(user);
     }
+
     logger.info('add customer', customer);
 
     self.list.push(customer);
@@ -163,16 +164,6 @@ UserManager.prototype.updateUser = function(data) {
     visitor.hasChange = true;
     visitor.operator = data.operator;
   }
-  // } else if (type == 'page') {
-  //   if (visitor.pages == null || visitor.pages == undefined) {
-  //     visitor.pages = [];
-  //     visitor.pages.push(data.currentPage);
-  //   } else {
-  //     if (visitor.pages.indexOf(data.currentPage) <= 0) {
-  //       visitor.pages.push(data.currentPage);
-  //     }
-  //   }
-  // }
 
   logger.info('updateUser successfully', visitor);
 };
@@ -186,7 +177,7 @@ UserManager.prototype.saveUser = function(visitor) {
     return;
   }
 
-  //save to server, wheather visitor start chatting or not
+  //save to server, whether visitor start chatting or not
   self.conekLogger.saveUser(visitor);
 };
 
@@ -195,9 +186,11 @@ UserManager.prototype.findOperators = function(cid, cb) {
   var customer = _.find(self.list, function(c) {
     return c.id = cid;
   });
+
   var ret = customer ? customer.operators : null;
   return cb(null, ret);
 };
+
 /**
  * @param cid customer id
  * @param oid operator id
@@ -275,6 +268,7 @@ UserManager.prototype.setConek = function(cid, oid, vid, conek) {
   if (visitor)
     visitor.conek = conek;
 }
+
 /**
  * handle client disconnect
  * @param sid socket id
@@ -315,14 +309,12 @@ UserManager.prototype.setConek = function(cid, oid, vid, conek) {
          self.saveUser(user);
        }
 
+       //remove socket
        user.sockets.splice(sIndex, 1);
 
        if (user.sockets.length == 0) {
-         //cus.operators.splice(oIndex, 1);
-         var uid = user.id;
-
          setTimeout(function() {
-           checkOffline(type, customer, uid, function(found) {
+           checkOffline(type, customer, user.id, function(found) {
              if (found) {
                return cb(null, found);
              }
@@ -389,7 +381,11 @@ UserManager.prototype.setCallPeer = function(cid, oid, vid, osid, vsid, uuid) {
 function checkOffline(type, customer, uid, cb) {
   //find user
   var user = null, index = null, uuid = null;
-  var isOl = false;
+  var isOl = false;   //is offline
+  var ret = {
+    cid: customer.id,
+    uid: uid
+  }
 
   if (type == 'operator') {
     user = _.find(customer.operators, function (o, i) {
@@ -397,7 +393,9 @@ function checkOffline(type, customer, uid, cb) {
       return o.id == uid;
     });
     if (user && user.sockets.length == 0) {
-      uuid = user.uuid;
+      //save coneks to inform visitor
+      ret.coneks = user.coneks;
+
       customer.operators.splice(index, 1);
       isOl = true;
     }
@@ -407,21 +405,17 @@ function checkOffline(type, customer, uid, cb) {
       return v.id == uid;
     });
     if (user && user.sockets.length == 0) {
-      uuid = user.uuid;
       customer.visitors.splice(index, 1);
       isOl = true;
     }
   }
 
   //TODO check customer & remove
-  //cid = customer.id
 
   if (isOl) {
-    return cb({
-      cid: customer.id,
-      uid: uid,
-      uuid: uuid
-    });
+    ret.uuid = user.uuid;
+
+    return cb(ret);
   }
 
   return cb(null);
