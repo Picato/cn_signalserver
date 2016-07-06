@@ -55,10 +55,12 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
       customer.operators.push(user);
     }
 
-    logger.info('add customer', customer);
-
+    logger.info('add a customer', customer);
     self.list.push(customer);
-    return cb(null, null);
+
+    return cb(null, {
+      type: 'newcustomer'
+    });
   }
 
   var coneks = [];
@@ -129,7 +131,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
     customer.operators.push(user);
 
     return cb(null, {
-      type: 'new',
+      type: 'newoperator',
       visitors: customer.visitors
     });
   }

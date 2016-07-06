@@ -273,7 +273,11 @@ CallManager.prototype.handleClient = function (client) {
         }
 
         //inform sails server  - set offline
-        self.conekLogger.operatorOffline({id: obj.uid});
+        console.log('inform operator offline', obj.uid);
+        self.conekLogger.operatorStatus({
+          id: obj.uid,
+          status: 'offline'
+        });
       }
 
       if (obj.action == 'call') {
@@ -335,13 +339,19 @@ CallManager.prototype.addUser = function (socket, data) {
 
     if (!details) return;
 
-    logger.info('find emit', details);
+    //set online for operator
+    if (details.type == 'newcustomer' && data.type == 'operator') {
+      self.conekLogger.operatorStatus({
+        id: data.id,
+        status: 'online'
+      });
+      return;
+    }
 
     if (data.type == 'operator') {
       //emit all oll visitors to operator
       var ret = [];
       _.each(details.visitors, function (detail) {
-
         ret.push({
           id: detail.id,
           name: detail.name,
@@ -357,15 +367,19 @@ CallManager.prototype.addUser = function (socket, data) {
       });
 
       socket.emit(MSGTYPE.VISITORS, ret);
+
+      //set operator online
+      if (details.type == 'newoperator') {
+        self.conekLogger.operatorStatus({
+          id: data.id,
+          status: 'online'
+        });
+      }
     } else { //handle new visitor joins
       logger.info('info visitor join', details);
 
-      //if (details.type == 'new') {
-        //remove unnecessary information
-      delete data.cid;
-      delete data.token;
-      delete data.key;
-      //delete data.type;
+      //remove unnecessary information
+      delete data.cid; delete data.token; delete data.key; //delete data.type;
 
       var sendSocket;
       _.each(details.operators, function (o) { //each operator
