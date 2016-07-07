@@ -364,6 +364,9 @@ CallManager.prototype.addUser = function (socket, data) {
           exInfo: detail.exInfo,
           pages: detail.pages
         });
+
+        //conek operator socket <--> visitor socket
+        socket.join(detail.conek);
       });
 
       socket.emit(MSGTYPE.VISITORS, ret);

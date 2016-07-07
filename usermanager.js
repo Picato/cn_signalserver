@@ -84,7 +84,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
       }
       return cb(null, { coneks: coneks, operators: customer.operators, pages: user.pages });
     }
-  } else {
+  } else {  //operator
     user = _.find(customer.operators, function(o) {
       return o.id == data.id;
     });
