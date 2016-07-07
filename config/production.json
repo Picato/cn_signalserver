@@ -35,6 +35,6 @@
     "videocall": "http://localhost/api/conek/logvideocall",
     "missvideocall": "http://localhost/api/conek/logmissvideocall",
     "saveuser": "http://localhost/api/visitor/operConnect",
-    "offline": "http://localhost/api/user/offline"
+    "status": "http://localhost/api/user/status"
   }
 }
