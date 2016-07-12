@@ -173,7 +173,7 @@ CallManager.prototype.handleClient = function (client) {
 
     //inform caller
     if (receiver)
-      receiver.emit(MSGTYPE.DECLINE, {type: message.type});
+      receiver.emit(MSGTYPE.DECLINE, {type: message.type, from: message.from});
 
     var conek = message.conek;
 

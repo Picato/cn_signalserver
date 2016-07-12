@@ -17,13 +17,18 @@ ConekLogger.prototype.logchat = function(args) {
   if (!args) return;
 
   var type = args.type, content = null, direction = '';
+  var file = null, status = '';
   if (type == 'chat') {
     if (!args.payload) return;
     content = args.payload.content;
     direction = args.payload.from;
+    file = args.payload.file;
+    status = args.payload.status;
   } else {
     content = args.content;
     direction = args.from;
+    file = args.file;
+    status = args.status;
   }
 
   var log = {
@@ -32,7 +37,16 @@ ConekLogger.prototype.logchat = function(args) {
     content: content,
     type: type
   }
-
+  if (file && file != undefined) {
+    if (status == 'sending' || status == 'error')
+      return;
+    log = {
+      conek: args.conek,
+      from: direction,
+      content: '(file) ' + file.filename,
+      type: type
+    }
+  }
   this.client.post(this.restapi.chat, {
     json: log
   }, function(error, response, body) {
