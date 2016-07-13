@@ -17,9 +17,10 @@ logger.addColors({
 
 //transport - color console
 logger.remove(logger.transports.Console);
-logger.add(logger.transports.Console, { level: 'debug', colorize:true });
+//logger.add(logger.transports.Console, { level: 'debug', colorize:true });
+//logger.add(logger.transports.Console, { level: 'info', colorize:true });
 
 //transport - file
-//logger.add(logger.transports.File, { filename: "conek_signal.log" });
+logger.add(logger.transports.File, { level: 'info', filename: "conek_signal.log" });
 
 module.exports = logger;
