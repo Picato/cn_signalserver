@@ -346,6 +346,19 @@ CallManager.prototype.handleClient = function (client) {
       }
     }
   });
+
+  client.on(MSGTYPE.OPERATOR_ACCEPT, function(message) {
+    console.log('operator accept call:', message);
+    var conek = message.conek;
+    //inform room
+    if (conek != undefined && conek) {
+      var room = client.broadcast.to(conek);
+      if (room) {
+        logger.info('broadcast accept call of visitor to room');
+        room.emit(MSGTYPE.OPERATOR_ACCEPT, message);
+      }
+    }
+  });
 }
 
 /**
