@@ -305,11 +305,11 @@ UserManager.prototype.setConek = function(cid, oid, vid, conek) {
          return socket == sid;
        });
 
-       if (type == 'visitor') {
-         //TODO delete some redundant info before saving
-         user.customer = cid;
-         self.saveUser(user);
-       }
+      //  if (type == 'visitor') {
+      //    //TODO delete some redundant info before saving
+      //    user.customer = cid;
+      //    self.saveUser(user);
+      //  }
 
        //remove socket
        user.sockets.splice(sIndex, 1);
