@@ -29,12 +29,12 @@
   "expiry": 864000,
 
   "logapi": {
-    "chat": "http://localhost/api/conek/logchat",
-    "call": "http://localhost/api/conek/logcall",
-    "misscall": "http://localhost/api/conek/logmisscall",
-    "videocall": "http://localhost/api/conek/logvideocall",
-    "missvideocall": "http://localhost/api/conek/logmissvideocall",
-    "saveuser": "http://localhost/api/visitor/operConnect",
-    "status": "http://localhost/api/user/status"
+    "chat": "http://localhost:1337/api/conek/logchat",
+    "call": "http://localhost:1337/api/conek/logcall",
+    "misscall": "http://localhost:1337/api/conek/logmisscall",
+    "videocall": "http://localhost:1337/api/conek/logvideocall",
+    "missvideocall": "http://localhost:1337/api/conek/logmissvideocall",
+    "saveuser": "http://localhost:1337/api/visitor/operConnect",
+    "status": "http://localhost:1337/api/user/status"
   }
 }
