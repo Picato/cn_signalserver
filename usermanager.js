@@ -30,7 +30,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
   });
 
   //new customer
-  if (customer != null && customer != undefined) {
+  if (customer == null || customer == undefined) {
     customer = { id: data.cid, operators: [], visitors: [] };
 
     //create new user
