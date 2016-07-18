@@ -409,7 +409,8 @@ CallManager.prototype.addUser = function (socket, data) {
         });
 
         //conek operator socket <--> visitor socket
-        socket.join(detail.conek);
+        if (detail.conek)
+          socket.join(detail.conek);
       });
       socket.emit(MSGTYPE.VISITORS, ret);
 

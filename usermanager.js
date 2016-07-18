@@ -30,7 +30,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
   });
 
   //new customer
-  if (!customer) {
+  if (customer == null || customer == undefined) {
     customer = { id: data.cid, operators: [], visitors: [] };
 
     //create new user
@@ -71,7 +71,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
       return v.id == data.id;
     });
 
-    if (user) { //this case happenned when visitor changing the page
+    if (user != null && user != undefined) { //this case happenned when visitor changing the page
       logger.info('find conek', user);
       user.sockets.push(socket);
       if (user.conek)
@@ -89,7 +89,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
       return o.id == data.id;
     });
 
-    if (user) {
+    if (user != null && user != undefined) {
       user.sockets.push(socket);
       if (user.coneks.length > 0)
         coneks.concat(user.coneks);   //multiple coneks
@@ -305,11 +305,11 @@ UserManager.prototype.setConek = function(cid, oid, vid, conek) {
          return socket == sid;
        });
 
-       if (type == 'visitor') {
-         //TODO delete some redundant info before saving
-         user.customer = cid;
-         self.saveUser(user);
-       }
+      //  if (type == 'visitor') {
+      //    //TODO delete some redundant info before saving
+      //    user.customer = cid;
+      //    self.saveUser(user);
+      //  }
 
        //remove socket
        user.sockets.splice(sIndex, 1);
