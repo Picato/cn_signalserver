@@ -114,27 +114,33 @@ CallManager.prototype.handleClient = function (client) {
   //accept message
   client.on(MSGTYPE.ACCEPT, function (message) {
     logger.info('accept msg--', message);
-    var rec = self.io.sockets.connected[message.ts];
+    var receiver = self.io.sockets.connected[message.ts];
 
     //forward accept message
-    if (rec) {
-      rec.emit(MSGTYPE.ACCEPT, {
-        id: client.id,
-        resource: client.resources,
-        conek: message.conek,
-        type: message.type
-      });
-
-      //join room
-      rec.join(message.conek);
+    if (!receiver) {
+      logger.error('accept msg, cannot find receiver');
+      return;
     }
+
+    receiver.emit(MSGTYPE.ACCEPT, {
+      id: client.id,
+      resource: client.resources,
+      conek: message.conek,
+      type: message.type
+    });
+
+    //join room
+    receiver.join(message.conek);
 
     //join client socket to room
     client.join(message.conek);
 
+    //inform stun&turn server
+    self.sendServerInfoToClient(receiver, self.config);
+    self.sendServerInfoToClient(client, self.config);
+
     //log call
     var callId = uuid.v1();
-
     self.conekLogger.logchat({
       conek: message.conek,
       from: message.from,
@@ -149,11 +155,11 @@ CallManager.prototype.handleClient = function (client) {
       oid = message.fid;
       vid = message.tid;
       osid = client.id;
-      vsid = rec.id;
+      vsid = receiver.id;
     } else {
       oid = message.tid;
       vid = message.fid;
-      osid = rec.id;
+      osid = receiver.id;
       vsid = client.id;
     }
 
@@ -163,11 +169,22 @@ CallManager.prototype.handleClient = function (client) {
   //decline message
   client.on(MSGTYPE.DECLINE, function(message) {
     logger.info('decline msg', message);
-    var rec = self.io.sockets.connected[message.to];
+    var receiver = self.io.sockets.connected[message.to];
 
     //inform caller
-    if (rec)
-      rec.emit(MSGTYPE.DECLINE, {type: message.type});
+    if (receiver)
+      receiver.emit(MSGTYPE.DECLINE, {type: message.type, from: message.from});
+
+    var conek = message.conek;
+
+    //inform room
+    if (conek != undefined && conek) {
+      var room = client.broadcast.to(conek);
+      if (room) {
+        logger.info('broadcast decline message to room');
+        room.emit(MSGTYPE.DECLINE, message);
+      }
+    }
 
     //log miscall
     self.conekLogger.logmisscall(message);
@@ -176,10 +193,10 @@ CallManager.prototype.handleClient = function (client) {
   //busy message
   client.on(MSGTYPE.BUSY, function(message) {
     logger.info('busy msg', message);
-    var rec = self.io.sockets.connected[message.to];
-    if (rec){
+    var receiver = self.io.sockets.connected[message.to];
+    if (receiver){
       logger.info('emit to talk');
-      rec.emit(MSGTYPE.BUSY, message);
+      receiver.emit(MSGTYPE.BUSY, message);
     }
 
     var conek = message.conek;
@@ -192,7 +209,7 @@ CallManager.prototype.handleClient = function (client) {
       }
     }
 
-    //log miscall
+    //TODO log miscall
     //self.conekLogger.logmisscall(message);
   });
 
@@ -321,6 +338,32 @@ CallManager.prototype.handleClient = function (client) {
     logger.info('updatevisitor', data);
     self.userManager.updateUser(data);
   });
+
+  client.on(MSGTYPE.VISITOR_ACCEPT, function(message) {
+    console.log('visitor accept call:', message);
+    var conek = message.conek;
+    //inform room
+    if (conek != undefined && conek) {
+      var room = client.broadcast.to(conek);
+      if (room) {
+        logger.info('broadcast accept call of visitor to room');
+        room.emit(MSGTYPE.VISITOR_ACCEPT, message);
+      }
+    }
+  });
+
+  client.on(MSGTYPE.OPERATOR_ACCEPT, function(message) {
+    console.log('operator accept call:', message);
+    var conek = message.conek;
+    //inform room
+    if (conek != undefined && conek) {
+      var room = client.broadcast.to(conek);
+      if (room) {
+        logger.info('broadcast accept call of visitor to room');
+        room.emit(MSGTYPE.OPERATOR_ACCEPT, message);
+      }
+    }
+  });
 }
 
 /**
@@ -368,7 +411,6 @@ CallManager.prototype.addUser = function (socket, data) {
         //conek operator socket <--> visitor socket
         socket.join(detail.conek);
       });
-
       socket.emit(MSGTYPE.VISITORS, ret);
 
       //set operator online

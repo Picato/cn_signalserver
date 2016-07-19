@@ -42,6 +42,9 @@ module.exports = {
   VISITORS: 'visitors',
   UPDATE_VISITOR: 'updatevisitor', //update visitor info
   VISITOR_PAGE_CHANGE: 'visitorpagechange',
+  VISITOR_ACCEPT: 'visitoraccept',
+  OPERATOR_ACCEPT: 'operatoraccept',
+
   //info
   OPERATOR_SOCKET_ID: 'operatorid',
 
