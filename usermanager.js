@@ -1,6 +1,8 @@
 /**
  * Created by tuan on 30/03/2016.
  */
+"use strict";
+
 var _ = require('lodash'),
   logger = require('winston'),
   ConekLogger = require('./coneklogger');
@@ -186,7 +188,7 @@ UserManager.prototype.saveUser = function(visitor) {
 UserManager.prototype.findOperators = function(cid, cb) {
   var self = this;
   var customer = _.find(self.list, function(c) {
-    return c.id = cid;
+    return c.id == cid;
   });
 
   var ret = customer ? customer.operators : null;
@@ -416,7 +418,6 @@ function checkOffline(type, customer, uid, cb) {
 
   if (isOl) {
     ret.uuid = user.uuid;
-
     return cb(ret);
   }
 
