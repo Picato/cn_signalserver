@@ -12,6 +12,8 @@ module.exports = {
   ACCEPT: 'accept',
   DECLINE: 'decline',
 
+  TYPING: 'typing',
+
   //rely
   TRYING: '100',
   OK: '200',
