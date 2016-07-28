@@ -227,6 +227,17 @@ CallManager.prototype.handleClient = function (client) {
     }
   });
 
+  client.on('typing', function(message) {
+    logger.info('on typing', message);
+    if (!message) return;
+
+    var room = client.broadcast.to(message.conek);
+    if (room) {
+      //emit to all sockets
+      room.emit('typing', message);
+    }
+  });
+
   client.on(MSGTYPE.DISCONNECT, function() {
     var type,
       id = client.handshake.query.vid;
