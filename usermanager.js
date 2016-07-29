@@ -1,9 +1,12 @@
 /**
  * Created by tuan on 30/03/2016.
  */
+"use strict";
+
 var _ = require('lodash'),
   logger = require('winston'),
   ConekLogger = require('./coneklogger');
+
 /**
  * @constructor manage all users
  *              will be upgrade to db/redis base
@@ -30,7 +33,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
   });
 
   //new customer
-  if (!customer) {
+  if (customer == null || customer == undefined) {
     customer = { id: data.cid, operators: [], visitors: [] };
 
     //create new user
@@ -71,7 +74,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
       return v.id == data.id;
     });
 
-    if (user) { //this case happenned when visitor changing the page
+    if (user != null && user != undefined) { //this case happenned when visitor changing the page
       logger.info('find conek', user);
       user.sockets.push(socket);
       if (user.conek)
@@ -89,7 +92,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
       return o.id == data.id;
     });
 
-    if (user) {
+    if (user != null && user != undefined) {
       user.sockets.push(socket);
       if (user.coneks.length > 0)
         coneks.concat(user.coneks);   //multiple coneks
@@ -186,7 +189,7 @@ UserManager.prototype.saveUser = function(visitor) {
 UserManager.prototype.findOperators = function(cid, cb) {
   var self = this;
   var customer = _.find(self.list, function(c) {
-    return c.id = cid;
+    return c.id == cid;
   });
 
   var ret = customer ? customer.operators : null;
@@ -284,53 +287,45 @@ UserManager.prototype.setConek = function(cid, oid, vid, conek) {
      return l.id == cid;
    });
 
-   if (customer) {
-     if (type == 'operator') {
-       user = _.find(customer.operators, function (l) {
-         return l.id == id;
-       });
-     } else {
-       user = _.find(customer.visitors, function(l) {
-         return l.id == id;
-       });
-     }
-     //check operator
-     if (user) {
-       if (action == 'call') {
-         return cb(null, {action: 'call', type: 'operator', uuid: user.call.uuid, socket: user.call.socket});
-       }
+   if (!customer)
+    return cb({error: 'not found'});
 
-       _.find(user.sockets, function(socket, index) {
-         sIndex = index;
-         return socket == sid;
-       });
-
-       if (type == 'visitor') {
-         //TODO delete some redundant info before saving
-         user.customer = cid;
-         self.saveUser(user);
-       }
-
-       //remove socket
-       user.sockets.splice(sIndex, 1);
-
-       if (user.sockets.length == 0) {
-         setTimeout(function() {
-           checkOffline(type, customer, user.id, function(found) {
-             if (found) {
-               return cb(null, found);
-             }
-           });
-         } , 3000); //3 seconds
-       }
-     } else {
-       return cb({error: 'not found'});
-     }
+   if (type == 'operator') {
+     user = _.find(customer.operators, function (l) {
+       return l.id == id;
+     });
    } else {
-     return cb({error: 'not found'});
+     user = _.find(customer.visitors, function(l) {
+       return l.id == id;
+     });
+   }
+
+   //check operator
+   if (!user)
+    return cb({error: 'not found'});
+
+   if (action == 'call') {
+     return cb(null, {action: 'call', type: 'operator', uuid: user.call.uuid, socket: user.call.socket});
+   }
+
+   _.find(user.sockets, function(socket, index) {
+     sIndex = index;
+     return socket == sid;
+   });
+
+   //remove socket
+   user.sockets.splice(sIndex, 1);
+
+   if (user.sockets.length == 0) {
+     setTimeout(function() {
+       checkOffline(type, customer, user.id, function(found) {
+         if (found) {
+           return cb(null, found);
+         }
+       });
+     } , 3000); //3 seconds
    }
  }
-
 
 /**
  * set call obj for operator, visitor
@@ -382,8 +377,7 @@ UserManager.prototype.setCallPeer = function(cid, oid, vid, osid, vsid, uuid) {
  */
 function checkOffline(type, customer, uid, cb) {
   //find user
-  var user = null, index = null, uuid = null;
-  var isOl = false;   //is offline
+  var user = null, index = null;
   var ret = {
     cid: customer.id,
     uid: uid
@@ -399,7 +393,7 @@ function checkOffline(type, customer, uid, cb) {
       ret.coneks = user.coneks;
 
       customer.operators.splice(index, 1);
-      isOl = true;
+      return cb(ret);
     }
   } else {  //visitor
     user = _.find(customer.visitors, function (v, i) {
@@ -408,18 +402,11 @@ function checkOffline(type, customer, uid, cb) {
     });
     if (user && user.sockets.length == 0) {
       customer.visitors.splice(index, 1);
-      isOl = true;
+      return cb(ret);
     }
   }
 
   //TODO check customer & remove
-
-  if (isOl) {
-    ret.uuid = user.uuid;
-
-    return cb(ret);
-  }
-
   return cb(null);
 }
 

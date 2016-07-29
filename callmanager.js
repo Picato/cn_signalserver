@@ -227,6 +227,17 @@ CallManager.prototype.handleClient = function (client) {
     }
   });
 
+  client.on(MSGTYPE.TYPING, function(message) {
+    logger.info('on typing', message);
+    if (!message) return;
+
+    var room = client.broadcast.to(message.conek);
+    if (room) {
+      //emit to all sockets
+      room.emit(MSGTYPE.TYPING, message);
+    }
+  });
+
   client.on(MSGTYPE.DISCONNECT, function() {
     var type,
       id = client.handshake.query.vid;
@@ -409,7 +420,8 @@ CallManager.prototype.addUser = function (socket, data) {
         });
 
         //conek operator socket <--> visitor socket
-        socket.join(detail.conek);
+        if (detail.conek)
+          socket.join(detail.conek);
       });
       socket.emit(MSGTYPE.VISITORS, ret);
 
