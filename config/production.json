@@ -20,7 +20,7 @@
   ],
   "turnservers": [
     {
-      "urls": ["turn:128.199.122.150"],
+      "urls": ["turn:103.56.158.42"],
       "secret": "viosoft1503vnus",
       "expiry": 86400
     }
