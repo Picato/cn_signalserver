@@ -36,12 +36,14 @@ module.exports = {
 
   //operator
   OPERATOR_LEAVE: 'operatorleave',
-
+  OPERATER_JOIN: 'operatorjoin',
+  
   //online visitor
   NUMBER_VISITOR: 'numbervisitor',
   VISITOR_JOIN: 'visitorjoin',
   VISITOR_LEAVE: 'visitorleave',
   VISITORS: 'visitors',
+  OPERATERS: 'operators',
   UPDATE_VISITOR: 'updatevisitor', //update visitor info
   VISITOR_PAGE_CHANGE: 'visitorpagechange',
   VISITOR_ACCEPT: 'visitoraccept',

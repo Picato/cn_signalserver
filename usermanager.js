@@ -39,6 +39,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
     //create new user
     user = {
       id: data.id,   //db id
+      user.name = data.name,
       sockets: [],
       call: {/*socket, peer*/},
       join: new Date()
@@ -47,14 +48,15 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
 
     //check type
     if (type == 'visitor') {
-      user.name = data.name;
       user.conek = null;    //visitor has only one coneks
       user.exInfo = data.exInfo;
       user.pages = [];
+      user.operator = null;
       user.pages.push(data.exInfo.currentPage);
       customer.visitors.push(user);
     } else {
       user.coneks = [];    //operator has multiple coneks
+      user.visitors = [];
       customer.operators.push(user);
     }
 
@@ -99,8 +101,14 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
       else
         coneks = null;
 
+      //filter other operators
+      var tempOpers = _.filter(customer.operators, function(o) {
+        return o.id != data.id;
+      });
+
       return cb(null, {
         visitors: customer.visitors,
+        operators: tempOpers,
         coneks: coneks
       });
     }
@@ -109,6 +117,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
   //create new operator/visitor
   user = {
     id: data.id,         //socket id
+    user.name = data.name,
     sockets: [],
     call: {/*socket, peer*/},
     join: new Date()
@@ -116,11 +125,11 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
   user.sockets.push(socket);
 
   if (type == 'visitor') {
-    user.name = data.name;
     user.conek = null;
     user.exInfo = data.exInfo;
     user.pages = [];
     user.pages.push(data.exInfo.currentPage);
+    user.operator = null;
     customer.visitors.push(user);
 
     //return all operators off customer
@@ -129,13 +138,18 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
       operators: customer.operators,
       visitor: user
     });
-  } else {
+  } else {  //operator
     user.coneks = [];
+    user.visitors = [];   //operator can handle multiple visitor
+    var tempOpers = customer.operators;
     customer.operators.push(user);
 
     return cb(null, {
       type: 'newoperator',
-      visitors: customer.visitors
+      id: user.id,
+      name: user.name,
+      visitors: customer.visitors,
+      operators: tempOpers
     });
   }
   logger.info('add user', user, customer);

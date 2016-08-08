@@ -403,9 +403,10 @@ CallManager.prototype.addUser = function (socket, data) {
     }
 
     if (data.type == 'operator') {
-      //emit all oll visitors to operator
+      //emit all online visitors to operator
       var ret = [];
       _.each(details.visitors, function (detail) {
+        //TODO why need push each field of detail
         ret.push({
           id: detail.id,
           name: detail.name,
@@ -423,10 +424,38 @@ CallManager.prototype.addUser = function (socket, data) {
         if (detail.conek)
           socket.join(detail.conek);
       });
-      socket.emit(MSGTYPE.VISITORS, ret);
+      if (!_.isEmpty(ret)) {
+        socket.emit(MSGTYPE.VISITORS, ret);
 
-      //set operator online
+        ret = [];
+      }
+
+      //emit other operators info to login operator
+      _.each(detais.operators, function(detail) {
+        ret.push({
+          id: detail.id,
+          name: detail.name,
+          visitors: detail.visitors
+        });
+      });
+      if (!_.isEmpty(ret)) {
+        socket.emit(MSGTYPE.OPERATERS, ret);
+      }
+
       if (details.type == 'newoperator') {
+        //inform other operators new operator join
+        _.each(detais.operators, function(detail) {
+          _.each(detai.sockets, function(socket) {
+            if (socket) {
+              socket.emit(MSGTYPE.OPERATER_JOIN, {
+                id: detail.id,
+                name: detail.name
+              });
+            }
+          });
+        });
+
+        //set operator online
         self.conekLogger.operatorStatus({
           id: data.id,
           status: 'online'
