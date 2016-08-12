@@ -393,6 +393,12 @@ function checkOffline(type, customer, uid, cb) {
       ret.coneks = user.coneks;
 
       customer.operators.splice(index, 1);
+
+      //remove conek of visitor connected to this operator
+      removeVisitor(customer.visitors, user.coneks, function() {
+        //
+      });
+
       return cb(ret);
     }
   } else {  //visitor
@@ -408,6 +414,23 @@ function checkOffline(type, customer, uid, cb) {
 
   //TODO check customer & remove
   return cb(null);
+}
+
+function removeVisitor(visitors, coneks, cb) {
+  //console.log('remove visitor conek, visitor, ', visitors, ' coneks', coneks);
+  if (!visitors || !coneks) {
+    return cb();
+  }
+  visitors.forEach(function(v) {
+    if (v.conek) {
+      if (coneks.indexOf(v.conek) >= 0) {
+        v.conek = null;
+        //console.log('got it ;');
+      }
+    }
+  });
+  //console.log('after removing conek, visitor=', visitors);
+  return cb();
 }
 
 module.exports = UserManager;
