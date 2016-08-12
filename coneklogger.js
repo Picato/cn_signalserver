@@ -47,6 +47,12 @@ ConekLogger.prototype.logchat = function(args) {
       type: type
     }
   }
+
+  if (content != null) {
+    if (content.search('[trigger]') >= 0) {
+      return;
+    }
+  }
   this.client.post(this.restapi.chat, {
     json: log
   }, function(error, response, body) {
