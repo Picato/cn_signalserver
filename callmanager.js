@@ -97,6 +97,9 @@ CallManager.prototype.handleClient = function (client) {
 
         //set conek
         self.userManager.setConek(cid, oid, vid, conek);
+      } else {
+        //reset callId
+        //self.userManager.setcallpeer
       }
     } else {//TODO handle no receiver sockets
 
@@ -308,7 +311,7 @@ CallManager.prototype.handleClient = function (client) {
         });
       }
 
-      if (obj.action == 'call') {
+      if (obj.action == 'call' && obj.uuid) {
         self.conekLogger.logchat({
           conek: null,
           from: null,

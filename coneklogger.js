@@ -53,6 +53,7 @@ ConekLogger.prototype.logchat = function(args) {
       return;
     }
   }
+  //console.log('logchat, log=', log);
   this.client.post(this.restapi.chat, {
     json: log
   }, function(error, response, body) {
