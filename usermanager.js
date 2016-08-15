@@ -305,7 +305,11 @@ UserManager.prototype.setConek = function(cid, oid, vid, conek) {
     return cb({error: 'not found'});
 
    if (action == 'call') {
-     return cb(null, {action: 'call', type: 'operator', uuid: user.call.uuid, socket: user.call.socket});
+     var callId = user.call.uuid;
+     //reset callId
+     user.call.uuid = null;
+     //TODO: need to check and delete user.call.socket?
+     return cb(null, {action: 'call', type: 'operator', uuid: callId, socket: user.call.socket});
    }
 
    _.find(user.sockets, function(socket, index) {
@@ -368,6 +372,7 @@ UserManager.prototype.setCallPeer = function(cid, oid, vid, osid, vsid, uuid) {
   else
     logger.info('setcallpeer - no visitor');
 }
+
 
 /**
  * check an user offline
