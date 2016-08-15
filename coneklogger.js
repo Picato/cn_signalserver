@@ -49,7 +49,7 @@ ConekLogger.prototype.logchat = function(args) {
   }
 
   if (content != null) {
-    if (content.search('[trigger]') >= 0) {
+    if (content.indexOf('[trigger]') >= 0) {
       return;
     }
   }
