@@ -378,6 +378,56 @@ CallManager.prototype.handleClient = function (client) {
       }
     }
   });
+
+  client.on(MSGTYPE.VISITOR_ONLINE, function(message) {
+    //console.log('+++on visitor online', message);
+    var id = message.id;
+    var customer = message.customer;
+    self.userManager.setVisitorStatus(customer, id, 'online', function(lastStt) {
+      if (!lastStt || lastStt != 'online')
+        return;
+
+        var operators = self.userManager.getOperatorSockets(customer);
+        //console.log('get operator:', operators);
+        if (!operators)
+          return;
+        var socket;
+        _.each(operators, function(o) {
+          _.each(o.sockets, function(s) {
+            socket = self.io.sockets.connected[s];
+            if (socket) {
+              //console.log('*****send online status');
+              socket.emit(MSGTYPE.VISITOR_ONLINE, {id: id});
+            }
+          });
+        });
+    });
+  });
+
+  client.on(MSGTYPE.VISITOR_IDLE, function(message) {
+    //console.log('---on visitor idle', message);
+    var id = message.id;
+    var customer = message.customer;
+    self.userManager.setVisitorStatus(customer, id, 'idle', function(lastStt) {
+      if (!lastStt || lastStt != 'idle' )
+        return;
+
+        var operators = self.userManager.getOperatorSockets(customer);
+        //console.log('get operator:', operators);
+        if (!operators)
+          return;
+        var socket;
+        _.each(operators, function(o) {
+          _.each(o.sockets, function(s) {
+            socket = self.io.sockets.connected[s];
+            if (socket) {
+              //console.log('******send idle status');
+              socket.emit(MSGTYPE.VISITOR_IDLE, {id: id});
+            }
+          });
+        });
+    });
+  });
 }
 
 /**
@@ -406,7 +456,7 @@ CallManager.prototype.addUser = function (socket, data) {
     }
 
     if (data.type == 'operator') {
-      //emit all oll visitors to operator
+      //emit all old visitors to operator
       var ret = [];
       _.each(details.visitors, function (detail) {
         ret.push({
@@ -419,7 +469,8 @@ CallManager.prototype.addUser = function (socket, data) {
           join: detail.join,
           conek: detail.conek,
           exInfo: detail.exInfo,
-          pages: detail.pages
+          pages: detail.pages,
+          status: detail.status
         });
 
         //conek operator socket <--> visitor socket
