@@ -49,10 +49,11 @@ ConekLogger.prototype.logchat = function(args) {
   }
 
   if (content != null) {
-    if (content.indexOf('[trigger]') >= 0) {
+    if (content.indexOf('[trigger]') >= 0 || content.indexOf('[common]')) {
       return;
     }
   }
+  //console.log('logchat, log=', log);
   this.client.post(this.restapi.chat, {
     json: log
   }, function(error, response, body) {

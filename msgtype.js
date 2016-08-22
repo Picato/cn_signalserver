@@ -46,7 +46,8 @@ module.exports = {
   VISITOR_PAGE_CHANGE: 'visitorpagechange',
   VISITOR_ACCEPT: 'visitoraccept',
   OPERATOR_ACCEPT: 'operatoraccept',
-
+  VISITOR_ONLINE: 'visitoronline',
+  VISITOR_IDLE: 'visitoridle',
   //info
   OPERATOR_SOCKET_ID: 'operatorid',
 
