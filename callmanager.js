@@ -70,6 +70,7 @@ CallManager.prototype.handleClient = function (client) {
         if (socket) {
           logger.info('send invite message');
           socket.join(conek);                //TODO check socket already in room
+          //console.log('emit invite, data = ', message);
           socket.emit(MSGTYPE.INVITE, message);
         }
       });
@@ -100,6 +101,11 @@ CallManager.prototype.handleClient = function (client) {
       } else {
         //reset callId
         //self.userManager.setcallpeer
+        //if call is from android device, we need send turn and sturn right after receiving invite message
+        // console.log('receiving invite call from android, send sturn/turn server to device');
+        // if (message.device == 'android') {
+        //   self.sendServerInfoToClient(client, self.config);
+        // }
       }
     } else {//TODO handle no receiver sockets
 
@@ -184,7 +190,7 @@ CallManager.prototype.handleClient = function (client) {
     if (conek != undefined && conek) {
       var room = client.broadcast.to(conek);
       if (room) {
-        logger.info('broadcast decline message to room');
+        //console.log('broadcast decline message to room');
         room.emit(MSGTYPE.DECLINE, message);
       }
     }
@@ -218,12 +224,16 @@ CallManager.prototype.handleClient = function (client) {
 
   // pass a message to another id
   client.on(MSGTYPE.MESSAGE, function (message) {
-    logger.info('on message', message);
+    //logger.info('on message', message);
     if (!message || message.type != 'chat') return;
 
     var room = client.broadcast.to(message.conek);
     if (room) {
       //emit to all sockets
+      //trick for mobile, because of payload from mobile is not object, just a content
+      if (typeof message.payload != 'object') {
+        message.payload = {content: message.payload, from: 'o'};
+      }
       room.emit(MSGTYPE.MESSAGE, message);
 
       self.conekLogger.logchat(message);
@@ -238,6 +248,19 @@ CallManager.prototype.handleClient = function (client) {
     if (room) {
       //emit to all sockets
       room.emit(MSGTYPE.TYPING, message);
+    }
+  });
+
+  client.on(MSGTYPE.CALLOFF, function(message) {
+    //console.log("on calloff: ", message);
+    var conek = message.conek;
+    var cid = message.cid;
+
+    if (conek) {
+      var room = client.broadcast.to(conek);
+      if (room) {
+        room.emit(MSGTYPE.CALLOFF, {cid: cid, conek: conek, type: 'o'});
+      }
     }
   });
 
@@ -256,8 +279,8 @@ CallManager.prototype.handleClient = function (client) {
     var action = client.handshake.query.type;
     var conek = client.handshake.query.conek;
 
-    logger.info('disconnect id=', id, '  cid=', cid, ' action=', action, ' conek=', conek);
-
+    //logger.info('disconnect id=', id, '  cid=', cid, ' action=', action, ' conek=', conek);
+    console.log('disconnect id=', id, '  cid=', cid, ' action=', action, ' conek=', conek);
     //inform room
     if (conek != undefined && conek && action == 'call') {
       var room = client.broadcast.to(conek);
@@ -326,6 +349,7 @@ CallManager.prototype.handleClient = function (client) {
   //pass sdp message
   client.on(MSGTYPE.SDP, function(message) {
     //forward message to receive
+  //  console.log("onSdp, message=", message);
     var socket = self.io.sockets.connected[message.to];
     message.from = client.id;
     if (socket) {
@@ -367,7 +391,7 @@ CallManager.prototype.handleClient = function (client) {
   });
 
   client.on(MSGTYPE.OPERATOR_ACCEPT, function(message) {
-    console.log('operator accept call:', message);
+    //console.log('operator accept call:', message);
     var conek = message.conek;
     //inform room
     if (conek != undefined && conek) {
@@ -477,6 +501,7 @@ CallManager.prototype.addUser = function (socket, data) {
         if (detail.conek)
           socket.join(detail.conek);
       });
+      //console.log('emit visitors', ret);
       socket.emit(MSGTYPE.VISITORS, ret);
 
       //set operator online
@@ -501,8 +526,9 @@ CallManager.prototype.addUser = function (socket, data) {
               data.join = new Date();
               data.pages = details.visitor.pages;
               data.currentPage = details.visitor.currentPage;
-              logger.info('emit visitor join ', data);
+              //console.log('emit visitor join socket.id=', sendSocket.id, ' data=', data);
               sendSocket.emit(MSGTYPE.VISITOR_JOIN, data);
+              //sendSocket.emit('hello',{hello: "this is message from node server"});
             } else {
               logger.info('visitorpagechange ', data.exInfo.currentPage);
               sendSocket.emit(MSGTYPE.VISITOR_PAGE_CHANGE, {id: data.id, currentPage: data.exInfo.currentPage, pages: details.pages});
@@ -516,9 +542,9 @@ CallManager.prototype.addUser = function (socket, data) {
     //if have coneks
     _.each(details.coneks, function(conek) {
       socket.join(conek);
-      console.log('on conek', data);
+      //console.log('on conek', data);
       if (data.type == 'visitor'){
-        console.log('emit on conek');
+        //console.log('emit on conek');
         socket.emit(MSGTYPE.CONEK, conek);
       }
     });
@@ -551,6 +577,16 @@ CallManager.prototype.sendServerInfoToClient = function (client, config) {
 
   // tell client about turn servers
   client.emit(MSGTYPE.TURNSERVER, credentials);
+}
+
+//set operator status, this happened only in mobile when socket reconnect
+CallManager.prototype.setOperatorStatus = function (data) {
+  //console.log('Inform operator ', data.id, ' online');
+  var self = this;
+  self.conekLogger.operatorStatus({
+    id: data.id,
+    status: 'online'
+  });
 }
 
 module.exports = CallManager;

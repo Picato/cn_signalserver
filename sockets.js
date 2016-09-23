@@ -6,6 +6,10 @@ var socketIO = require('socket.io'),
 module.exports = function (server, config) {
 
   var io = socketIO.listen(server);
+//  io.set('close timeout', 60);
+//  io.set('heartbeat timeout', 5000);
+//  io.set('heartbeat interval', 5000);
+
 
   //authenticate
   require('socketio-auth')(io, {
@@ -18,12 +22,14 @@ module.exports = function (server, config) {
   var cm = new CM(io, config);
 
   io.sockets.on('connection', function (client) {
+    //console.log('on connection');
     cm.handleClient(client);
   });
 
   //authenticate function
   function authenticate(socket, data, callback) {
-    logger.debug('request authenticate', socket.id, data);
+    //logger.debug('request authenticate', socket.id, data);
+    //console.log('request authenticate', socket.id, data);
     var token = data.token;
     var key = data.key;
     //var hash = crypto.createHmac('sha1', config.secret).update(key);
@@ -40,6 +46,9 @@ module.exports = function (server, config) {
   //post authenticate
   function postAuthenticate(socket, data) {
     if (!data) return;
+    if (data.type == 'operator') {
+      cm.setOperatorStatus({id: data.id});
+    }
 
     logger.info('post authenticate data', data);
     data.type == 'visitor' ? logger.info('visitor join') : logger.info('operator join');
