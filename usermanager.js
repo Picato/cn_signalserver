@@ -26,6 +26,7 @@ function UserManager(config) {
  * @returns {*}
  */
 UserManager.prototype.addUser = function(type, socket, data, cb) {
+  console.log("add user");
   var self = this, user;
   //find customer
   var customer = _.find(self.list, function(c) {
@@ -90,6 +91,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
       return cb(null, { coneks: coneks, operators: customer.operators, pages: user.pages });
     }
   } else {  //operator
+    console.log('operator join, visitor=', customer.visitors);
     user = _.find(customer.operators, function(o) {
       return o.id == data.id;
     });
