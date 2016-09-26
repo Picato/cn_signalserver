@@ -98,7 +98,7 @@ ConekLogger.prototype.operatorStatus = function(message) {
 };
 
 ConekLogger.prototype.saveUser = function(args) {
-  console.log('save visitor to server, args = ', args);
+  //console.log('save visitor to server, args = ', args);
   this.client.post(this.restapi.saveuser, {
     json: args
   }, function(error, response, body) {
