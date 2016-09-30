@@ -44,7 +44,8 @@ ConekLogger.prototype.logchat = function(args) {
       conek: args.conek,
       from: direction,
       content: '(file) ' + file.filename,
-      type: type
+      type: type,
+      fd: file.fd
     }
   }
 
