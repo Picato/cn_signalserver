@@ -20,10 +20,7 @@ function ConnectionCtr(io, config) {
   //init conek logger
   this.conekLogger = new ConekLogger(config.logapi);
 
-  //register subscription
-  pubsub.subVisitorJoin('456');
-
-  //handle notifycation
+  //handle notification
   pubsub.on(EVENT.VISITOR_JOIN, function(channel, message) {
     logger.info('receive event visitor join', message);
   });
@@ -79,20 +76,20 @@ ConnectionCtr.prototype.handleClient = function (client) {
     //check 1st operator, if yes --> subscribe related channel
     //                    if no --> get other operators & inform
     if (self.redisUtil.isFirstOperator(cid)) {
-
+      self.pubsub.subOperatorChannels();
     } else {
       var operators = self.redisUtil.getOpeators(cid);
       if (!_.isEmpty(visitors))
-        client.emit();
+        client.emit(EVENT.OPERATORS, operators);
 
       //publish
       self.pubsub.pubOperatorJoin(cid);
     }
 
-    //get visitor info --> operator
-    var clients = self.redisUtil.getVisitors(cid);
+    //get visitor info send to the operator
+    var visitors = self.redisUtil.getVisitors(cid);
     if (!_.isEmpty(visitors))
-      client.emit();
+      client.emit(EVENT.VISITORS, clients);
 
     //log to redis
     self.redisUtil.addOperator(cid, oid, client.id);
@@ -109,7 +106,9 @@ ConnectionCtr.prototype.handleClient = function (client) {
    * chat message
    */
   client.on(EVENT.MESSAGE, function(message) {
+    //publish
 
+    //log message
   });
 
   //ringing message
