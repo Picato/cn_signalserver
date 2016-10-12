@@ -1,6 +1,6 @@
 var logger = require('winston');
 
-////loggly system
+//log to Logging system
 //var Loggly = require('winston-loggly').Loggly;
 //var loggly_options={ subdomain: "mysubdomain", inputToken: "efake000-000d-000e-a000-xfakee000a00" }
 //logger.add(Loggly, loggly_options);
@@ -17,10 +17,10 @@ logger.addColors({
 
 //transport - color console
 logger.remove(logger.transports.Console);
-//logger.add(logger.transports.Console, { level: 'debug', colorize:true });
+logger.add(logger.transports.Console, { level: 'debug', colorize:true });
 //logger.add(logger.transports.Console, { level: 'info', colorize:true });
 
 //transport - file
-logger.add(logger.transports.File, { level: 'info', filename: "conek_signal.log" });
+//logger.add(logger.transports.File, { level: 'info', filename: "conek_signal.log" });
 
 module.exports = logger;

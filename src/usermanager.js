@@ -26,6 +26,7 @@ function UserManager(config) {
  * @returns {*}
  */
 UserManager.prototype.addUser = function(type, socket, data, cb) {
+  console.log("add user");
   var self = this, user;
   //find customer
   var customer = _.find(self.list, function(c) {
@@ -39,7 +40,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
     //create new user
     user = {
       id: data.id,   //db id
-      user.name = data.name,
+      name: data.name,
       sockets: [],
       call: {/*socket, peer*/},
       join: new Date()
@@ -53,6 +54,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
       user.pages = [];
       user.operator = null;
       user.pages.push(data.exInfo.currentPage);
+      user.status = 'online';
       customer.visitors.push(user);
     } else {
       user.coneks = [];    //operator has multiple coneks
@@ -87,9 +89,11 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
       if (user.pages.indexOf(data.exInfo.currentPage) < 0) {
         user.pages.push(data.exInfo.currentPage);
       }
+      user.status = 'online';
       return cb(null, { coneks: coneks, operators: customer.operators, pages: user.pages });
     }
   } else {  //operator
+    console.log('operator join, visitor=', customer.visitors);
     user = _.find(customer.operators, function(o) {
       return o.id == data.id;
     });
@@ -117,7 +121,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
   //create new operator/visitor
   user = {
     id: data.id,         //socket id
-    user.name = data.name,
+    name: data.name,
     sockets: [],
     call: {/*socket, peer*/},
     join: new Date()
@@ -130,6 +134,7 @@ UserManager.prototype.addUser = function(type, socket, data, cb) {
     user.pages = [];
     user.pages.push(data.exInfo.currentPage);
     user.operator = null;
+    user.status = 'online';
     customer.visitors.push(user);
 
     //return all operators off customer
@@ -224,11 +229,16 @@ UserManager.prototype.getOperatorSockets = function(cid, oid) {
   });
   if (!customer)
     return null;
+
+  if (!oid || oid == undefined)
+    return customer.operators;
+
   var ret = _.find(customer.operators, function(user) {
     return user.id == oid;
   });
   return ret ? ret.sockets : null;
 };
+
 
 /**
  * @param cid customer id
@@ -319,7 +329,11 @@ UserManager.prototype.setConek = function(cid, oid, vid, conek) {
     return cb({error: 'not found'});
 
    if (action == 'call') {
-     return cb(null, {action: 'call', type: 'operator', uuid: user.call.uuid, socket: user.call.socket});
+     var callId = user.call.uuid;
+     //reset callId
+     user.call.uuid = null;
+     //TODO: need to check and delete user.call.socket?
+     return cb(null, {action: 'call', type: 'operator', uuid: callId, socket: user.call.socket});
    }
 
    _.find(user.sockets, function(socket, index) {
@@ -383,6 +397,46 @@ UserManager.prototype.setCallPeer = function(cid, oid, vid, osid, vsid, uuid) {
     logger.info('setcallpeer - no visitor');
 }
 
+UserManager.prototype.setVisitorStatus = function(cid, id, status, cb) {
+  var self = this;
+  var customer = _.find(self.list, function(l) {
+    return l.id == cid;
+  });
+  if (!customer)
+    return cb(null);
+
+  var visitor = _.find(customer.visitors, function(v) {
+    return v.id == id;
+  });
+
+  if (!visitor)
+    return cb(null);
+
+  var lastStatus = visitor.status;
+
+
+  if (status == 'online') {
+    visitor.status = status;
+    if (!visitor.lastStt || visitor.lastStt == 'idle')
+      return cb('online')
+
+    visitor.lastStt = 'online'
+    return cb(null)
+  }
+
+  visitor.status = status;
+  setTimeout(function(){
+    if (visitor.status == 'idle') {
+      visitor.lastStt = 'idle'
+      return cb('idle');
+    }
+
+    visitor.lastStt = 'online';
+    return cb('online');
+  }, 5000);
+  //return cb(lastStatus);
+}
+
 /**
  * check an user offline
  * @param type
@@ -407,6 +461,12 @@ function checkOffline(type, customer, uid, cb) {
       ret.coneks = user.coneks;
 
       customer.operators.splice(index, 1);
+
+      //remove conek of visitor connected to this operator
+      removeVisitor(customer.visitors, user.coneks, function() {
+        //
+      });
+
       return cb(ret);
     }
   } else {  //visitor
@@ -422,6 +482,23 @@ function checkOffline(type, customer, uid, cb) {
 
   //TODO check customer & remove
   return cb(null);
+}
+
+function removeVisitor(visitors, coneks, cb) {
+  //console.log('remove visitor conek, visitor, ', visitors, ' coneks', coneks);
+  if (!visitors || !coneks) {
+    return cb();
+  }
+  visitors.forEach(function(v) {
+    if (v.conek) {
+      if (coneks.indexOf(v.conek) >= 0) {
+        v.conek = null;
+        //console.log('got it ;');
+      }
+    }
+  });
+  //console.log('after removing conek, visitor=', visitors);
+  return cb();
 }
 
 module.exports = UserManager;

@@ -44,9 +44,17 @@ ConekLogger.prototype.logchat = function(args) {
       conek: args.conek,
       from: direction,
       content: '(file) ' + file.filename,
-      type: type
+      type: type,
+      fd: file.fd
     }
   }
+
+  if (content != null) {
+    if (content.indexOf('[trigger]') >= 0 || content.indexOf('[common]') >= 0) {
+      return;
+    }
+  }
+  //console.log('logchat, log=', log);
   this.client.post(this.restapi.chat, {
     json: log
   }, function(error, response, body) {
@@ -91,7 +99,7 @@ ConekLogger.prototype.operatorStatus = function(message) {
 };
 
 ConekLogger.prototype.saveUser = function(args) {
-  console.log('save visitor to server, args = ', args);
+  //console.log('save visitor to server, args = ', args);
   this.client.post(this.restapi.saveuser, {
     json: args
   }, function(error, response, body) {
