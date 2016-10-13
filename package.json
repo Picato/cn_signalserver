@@ -5,7 +5,6 @@
   "dependencies": {
     "getconfig": "2.1.0",
     "lodash": "^4.6.1",
-    "node-uuid": "1.2.0",
     "pubsub-js": "^1.5.3",
     "redis": "^2.6.2",
     "request": "^2.69.0",
