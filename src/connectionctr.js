@@ -41,17 +41,18 @@ ConnectionCtr.prototype.handleClient = function (client) {
   client.on(EVENT.VISITOR_JOIN, function(message) {
     logger.info('visitor join', message);
     var cid = message.cid,
-        vid = message.vid,
-        page = message.page;
+        vid = message.vid;
 
     if (_.isEmpty(cid) || _.isEmpty(vid))
       return;
 
-    //add visitor id
-    self.redisUtil.addVisitor(cid, vid);
-    self.redisUtil.addVisitorPage(vid, page);
+    //join room as vid
+    client.join(vid);
 
-    //pub join event
+    //add visitor
+    self.redisUtil.addVisitor(cid, message);
+
+    //TODO if new --> pub join event
     self.pubsub.pubVisitorJoin(cid);
 
     //subscribe receive channel
@@ -72,11 +73,19 @@ ConnectionCtr.prototype.handleClient = function (client) {
     //0 --> request smart agent
     //1 --> transfer conversation to the operator
     // > 1 --> send request to all operators
-    if (self.redisUtil.getOnlineOperator(cid)) {
-      //publish to operators
-    } else {
-      //no operator --> publish to smart agent
-    }
+    self.redisUtil.getNumberOperator(cid, function(err, number) {
+      if (err) {
+        //TODO handle err
+        return;
+      }
+      if (number == 0) {
+
+      } else if (number == 1) {
+
+      } else { //number > 1
+
+      }
+    });
   });
 
   //operator
@@ -88,14 +97,13 @@ ConnectionCtr.prototype.handleClient = function (client) {
     //join room
     client.join(cid);
 
-    //check 1st operator, if yes --> subscribe related channel
-    //                    if no --> get other operators & inform
-    if (self.redisUtil.isFirstOperator(cid)) {
+    //1st operator, --> subscribe related channel
+    // else --> get other operators & inform
+    var operators = self.redisUtil.getOpeators(cid);
+    if (_.isEmpty(visitors)) {
       self.pubsub.subOperatorChannel(cid);
     } else {
-      var operators = self.redisUtil.getOpeators(cid);
-      if (!_.isEmpty(visitors))
-        client.emit(EVENT.OPERATORS, operators);
+      client.emit(EVENT.OPERATORS, operators);
 
       //publish
       self.pubsub.pubOperatorJoin(cid);
