@@ -59,13 +59,26 @@ RedisUtil.prototype.delVisitor = function(cid, vid) {
 }
 
 /*
- * return number of online operator
+ * return all online operators
  */
-RedisUtil.prototype.getNumberOperator = function(cid, cb) {
+ RedisUtil.prototype.getOperators = function(cid, cb) {
+    var key = OPERATOR + cid;
+    client.lrange(key, 0, -1, function(err, reply) {
+      if (err)
+        return cb(err);
+      return cb(null, reply);
+    });
+ }
+
+/*
+ * return all online operator
+ */
+RedisUtil.prototype.getOperators = function(cid, cb) {
   var key = OPERATOR + cid;
-  client.llen(key, function(err, result) {
+  client.lrange(key, 0, -1, function(err, result) {
     if (err)
       return cb(err);
+
     return cb(null, result);
   });
 }
@@ -73,17 +86,20 @@ RedisUtil.prototype.getNumberOperator = function(cid, cb) {
 /*
  * get all visitor with visited pages
  */
-RedisUtil.prototype.getVisitors = function(cid) {
+RedisUtil.prototype.getVisitors = function(cid, cb) {
   var key = VISITOR + cid;
-  var ret = client.get(key);
+  var ret = client.lrange(key, 0, -1, function(err, reply) {
+    if(err)
+      return cb(err);
 
-  return ret ? ret : null;
+    return cb(null, reply);
+  });
 }
 
 /*
  * add an operator with socket
  */
-RedisUtil.prototype.addOperator = function(cid, oid, socket) {
+RedisUtil.prototype.addOperator = function(cid, oid) {
   var key = OPERATOR + cid;
   client.lpush(key, oid);
 }

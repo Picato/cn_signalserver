@@ -10,18 +10,30 @@ var crypto = require('crypto'),
   ConekLogger = require('./coneklogger');
 
 function ConnectionCtr(io, config) {
-  this.io = io;
-  this.config = config;
+  var self = this;
+  self.io = io;
+  self.config = config;
 
   //init conek logger
-  this.conekLogger = new ConekLogger(config.logapi);
+  self.conekLogger = new ConekLogger(config.logapi);
 
   var pubsub = this.pubsub = new PubSub();
-  this.redisUtil = new RedisUtil();
+  self.redisUtil = new RedisUtil();
 
   //handle notification
-  pubsub.on(EVENT.VISITOR_JOIN, function(channel, message) {
+  pubsub.on(EVENT.VISITOR_JOIN, function(message) {
     logger.info('receive event visitor join', message);
+  });
+
+  pubsub.on(EVENT.VISITOR_NEW_CONVERSATION, function(message) {
+    logger.info('receive new visitor request', message);
+    var cid = message.cid;
+
+    //remove unnecessary information
+    delete message.cid;
+
+    //emit to all operators
+    self.io.in(cid).emit(EVENT.VISITOR_NEW_CONVERSATION, message);
   });
 }
 
@@ -65,6 +77,7 @@ ConnectionCtr.prototype.handleClient = function (client) {
    *    or --> publish to new chat request
    */
   client.on(EVENT.VISITOR_NEW_CONVERSATION, function(message) {
+    logger.info('v new conversation', message);
     var cid = message.cid;
     if (_.isEmpty(cid))
       return;
@@ -73,17 +86,22 @@ ConnectionCtr.prototype.handleClient = function (client) {
     //0 --> request smart agent
     //1 --> transfer conversation to the operator
     // > 1 --> send request to all operators
-    self.redisUtil.getNumberOperator(cid, function(err, number) {
-      if (err) {
-        //TODO handle err
+    self.redisUtil.getOperators(cid, function(err, operators) {
+      if (err || operators == null) {
         return;
       }
-      if (number == 0) {
-
-      } else if (number == 1) {
-
-      } else { //number > 1
-
+      console.log(operators);
+      var len = operators.length;
+      if (len == 0) {
+        //smart agent
+        console.log('active smart agent');
+      } else if (len == 1) {
+        console.log('assign directly');
+        var oid = operators[0].oid;
+        self.pubsub.pubAssignVisitor(oid, message);
+      } else {
+        console.log('send the request');
+        self.pubsub.pubNewVisitorRequest(message);
       }
     });
   });
@@ -94,25 +112,37 @@ ConnectionCtr.prototype.handleClient = function (client) {
     var cid = message.cid,
         oid = message.oid;
 
-    //join room
+    if (_.isEmpty(cid) || _.isEmpty(oid))
+      return;
+
+    //join room for customer
     client.join(cid);
+
+    //join own room
+    client.join(oid);
 
     //1st operator, --> subscribe related channel
     // else --> get other operators & inform
-    var operators = self.redisUtil.getOpeators(cid);
-    if (_.isEmpty(visitors)) {
+    self.redisUtil.getOperators(cid, function(err, operators) {
       self.pubsub.subOperatorChannel(cid);
-    } else {
-      client.emit(EVENT.OPERATORS, operators);
+      if (err == null) {
+        if (_.isEmpty(operators)) {
+          self.pubsub.subOperatorChannel(cid);
+        } else {
+          client.emit(EVENT.OPERATORS, operators);
 
-      //publish
-      self.pubsub.pubOperatorJoin(cid);
-    }
+          //publish
+          self.pubsub.pubOperatorJoin(cid, {oid: oid});
+        }
+      }
+    });
 
     //get visitor info send to the operator
-    var visitors = self.redisUtil.getVisitors(cid);
-    if (!_.isEmpty(visitors))
-      client.emit(EVENT.VISITORS, clients);
+    self.redisUtil.getVisitors(cid, function(err, visitors) {
+      if (err == null && !_.isEmpty(visitors)) {
+        client.emit(EVENT.VISITORS, visitors);
+      }
+    });
 
     //log to redis
     self.redisUtil.addOperator(cid, oid, client.id);

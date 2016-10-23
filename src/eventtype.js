@@ -37,7 +37,7 @@ module.exports = {
   //operator
   OPERATOR_LEAVE: 'operatorleave',
   OPERATER_JOIN: 'operatorjoin',
-  
+
   //online visitor
   NUMBER_VISITOR: 'numbervisitor',
   VISITOR_JOIN: 'visitorjoin',
@@ -64,5 +64,9 @@ module.exports = {
 
   //server
   STUNSERVER: 'stunservers',
-  TURNSERVER: 'turnservers'
+  TURNSERVER: 'turnservers',
+
+  //chat
+  VISITOR_NEW_CONVERSATION: 'vnewconversation',
+  OPERATOR_NEW_CONVERSATION: 'onewconversation'
 }
