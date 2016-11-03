@@ -8,27 +8,26 @@ pub = sub = require('pubsub-js');
 // var redis = require("redis");
 // var sub = redis.createClient(), pub = redis.createClient();
 var Emitter = require('wildemitter'),
-    EVENT = require('./eventtype');
+    EVENT = require('./eventtype'),
+    CHANNEL = require('./channel');
 
-//channel
-var CHANNEL_VISITOR_JOIN = 'visitorjoin:',
-    CHANNEL_OPERATER_JOIN = 'operatorjoin:',
-    CHANNEL_ALL_OPERATORS = 'alloperator:';
-
+//constructor
 function PubSub() {}
 
-//add emit
+/*
+ * Emit to connectionctr
+ */
 Emitter.mixin(PubSub);
 
 //public function
 PubSub.prototype.pubVisitorJoin = function(cid) {
-  var channel = CHANNEL_VISITOR_JOIN + ":" + cid;
+  var channel = CHANNEL.VISITOR_JOIN + ":" + cid;
   pub.publish(channel, 'visitor is joined');
 }
 
 PubSub.prototype.subVisitorJoin = function(cid) {
   var self = this;
-  var channel = CHANNEL_VISITOR_JOIN + ":" + cid;
+  var channel = CHANNEL.VISITOR_JOIN + ":" + cid;
 
   sub.subscribe(channel, function(msg, data) {
     console.log( 'operator join', msg, data );
@@ -50,7 +49,7 @@ PubSub.prototype.subVisitorChannel = function(vid) {
  *
  */
 PubSub.prototype.pubOperatorJoin = function(cid, operator) {
-  var channel = CHANNEL_VISITOR_JOIN + cid;
+  var channel = CHANNEL.VISITOR_JOIN + cid;
   pub.publish(channel, operator);
 }
 
@@ -61,14 +60,12 @@ PubSub.prototype.pubOperatorJoin = function(cid, operator) {
 PubSub.prototype.subOperatorChannel = function (cid) {
   var self = this;
   //channel for all operators of a customer
-  var channel = CHANNEL_ALL_OPERATORS + cid;
+  var channel = CHANNEL.ALL_OPERATORS + cid;
   sub.subscribe(channel, function(msg, data) {  //msg = channel
     var event = data.event
         msg = data.msg;
     self.emit(event, msg);
   });
-
-
 }
 
 PubSub.prototype.pubMessageChannel = function(message) {
@@ -84,7 +81,7 @@ PubSub.prototype.pubAssignVisitor = function() {
 
 PubSub.prototype.pubNewVisitorRequest = function(message) {
     var cid = message.cid;
-    var channel = CHANNEL_ALL_OPERATORS + cid;
+    var channel = CHANNEL.ALL_OPERATORS + cid;
     pub.publish(channel, {
       event: EVENT.VISITOR_NEW_CONVERSATION,
       msg: message
